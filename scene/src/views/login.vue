@@ -49,7 +49,10 @@
     },
     mounted(){
       this.showLogin = true;
-      if (!this.adminInfo.id) {
+      console.log("&&&&&&&&&&&&&&&&")
+      console.log("adminInfo", this.adminInfo);
+      if (!this.adminInfo._id) {
+        console.log("获取用户data")
         this.getAdminData(); 
       }
     },
@@ -66,7 +69,7 @@
         if (res.status == 1) {
           this.$message({
             type: 'success',
-            message: '登录成功'
+            message: res.success
           });
           this.$router.push('manage')
         }else{
@@ -90,7 +93,7 @@
       // 监听的对象：adminInfo  对应的回调 function
       adminInfo: function (newValue){
         // newValue: 是变化后的adminInfo 
-        if (newValue.id) {
+        if (newValue._id) {
           this.$message({
             type: 'success',
             message: '检测到您之前登录过，将自动登录'

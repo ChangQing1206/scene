@@ -1,5 +1,6 @@
 import axios from 'axios';
 import qs from 'qs'
+axios.defaults.withCredentials=true;
 // axios 配置
 var instance = axios.create({
   // content-type 决定浏览器将以什么形式、什么编码读取这个文件
