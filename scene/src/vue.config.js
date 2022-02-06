@@ -7,7 +7,8 @@ module.exports = {
         "network": "@/network",
         "views": "@/views",
         "router": "@/router",
-        "api": "@/api"
+        "api": "@/api",
+        "utils": "@/utils"
       }
     }
   },

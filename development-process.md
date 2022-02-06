@@ -10,11 +10,11 @@
 
 #### **登录注册** 
 
-需要对管理员的信息加密，而且具有头像功能。如果登录过，还将自动登录。
+需要对管理员的信息加密。如果登录过，还将自动登录。
 
 #### 历史数据查询
 
-对游客的姓名、体温、充值金额、消费金额、消费商品名称，位置数据信息进行查询。
+对游客的姓名、体温、充值金额、消费金额、消费商品名称，位置数据信息进行查询。还可以对游客的轨迹进行回放。
 
 #### 喜好分析
 
@@ -160,11 +160,45 @@ mapState通过扩展运算符将store.state.adminInfo 映射this.adminInfo  这�
 
 npm install vue-router --save
 
- 
+#### 监控平台开发【将五邑大学视为景区，方便后面测试】
+
+##### 数据流向：从mqtt服务器到监控平台。
+
+监控平台订阅了mqtt服务器，当游客设备上传数据至mqtt服务器时，监控平台将接收到mqtt服务器发来的数据。
+
+1.监控平台将会为每个游客创建一个地图标记。
+
+游客设备【发布端】将会发送一个创建指令到监控平台，监控平台监听【订阅端】到后，生成对应的游客标记。
+
+2.地图标记上会提示该游客的一些信息。
+
+3.更新游客信息
+
+游客设备定时发送游客数据到监控平台，监控平台拿到数据后根据游客id进行游客标记更新。
+
+4.游客求助
+
+游客设备【发布端】发送一个求助指令到监控平台，监控平台监听【订阅端】到后，警报给管理员。
+
+5.当游客离开景区，mqtt服务器发送游客标记销毁信息到监控平台。
+
+游客设备【发布端】将会发送一个销毁指令【销毁按键】，监控平台【订阅端】监听到后，取销毁对应的游客标记
+
+##### 数据流向：从监控平台到mqtt服务器。
+
+游客设备使用switch可判断指令类型。指令1：售票系统将门票信息发送给游客设备。指令2：监控平台需要将游客分布情况【拥堵概率、时段和程度】发送至游客设备。指令3：电子围栏报警【进入禁入区域，监控平台发送报警至设备，同时通知管理员】。 指令4：进入景点提醒【游客进入景点，监控平台发送提醒】
+
+ 1.设置电子围栏，有两种围栏，禁区和景点，红色和绿色围栏。当进入红色围栏区域，发送警报。当进入绿色区域，发送提示信息。
+
+2.售票，将门票信息发给mqtt服务器
+
+3.监控平台会对游客分布的情况进行分析和预测。将【拥堵概率、时段和程度】发送给游客设备。通过网格质心合并算法
+
+![aHR0cHM6Ly9tbWJpei5xcGljLmNuL3N6X21tYml6X3BuZy9OWFNmWG5LTnZUNjR3eFBzSno4QXlPNHMzNFk1YkRqMzZ6RUplR3BmalNWNXNubjFES1loeUZRTDRTaWFJNnBHUDVFTFVweUZyZnR2M0FqQ0JSb2FBS1EvNjQw](D:\profession\graduation_design\code\test\mapGvl\aHR0cHM6Ly9tbWJpei5xcGljLmNuL3N6X21tYml6X3BuZy9OWFNmWG5LTnZUNjR3eFBzSno4QXlPNHMzNFk1YkRqMzZ6RUplR3BmalNWNXNubjFES1loeUZRTDRTaWFJNnBHUDVFTFVweUZyZnR2M0FqQ0JSb2FBS1EvNjQw.png)
 
  
 
- 
+ 通过判断聚合后的坐标，提示拥挤的位置。
 
  
 
