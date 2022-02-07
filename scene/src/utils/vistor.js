@@ -18,4 +18,4 @@ class vistor {
   }
 }
 
-module.exports = vistor;
+export default vistor;
