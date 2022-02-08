@@ -13,22 +13,26 @@ import * as mqtt from "mqtt";
 // 2.更新labelmaker 无影响
 // 这是游客对象
 var vistors = new Map();
+var amap = null;
+var map = null;
+var layer = null;
 // 这是游客标记  因为可以直接获取markers
-// var vistors_model = [];
+// var vistors_model = [];  // 必须将marker保存
 export default {
   data() {
     return{
       client: '',
-      AMap: null,   // AMap 类
-      map: null,    // 地图对象
-      labelsLayer: null,  // LabelsLayer 图层对象
+      // AMap: null,   // AMap 类
+      // map: null,    // 地图对象
+      // labelsLayer: null,  // LabelsLayer 图层对象
       // vistors: new Map(),  // 游客Map数据结构，维护景区游客的信息 // 不合理
     } 
   },
   mounted() {
     this.initMap();
-    this.initMqtt();
-    setInterval(this.update_vistors_model, 360000); // 定时器 6分钟更新一次
+    
+    // setInterval()的this 有问题
+    setInterval(this.update_vistors_model, 30000); // 定时器 6分钟更新一次
   },
   methods:{
     // 获取AMap类
@@ -39,16 +43,17 @@ export default {
         plugins:[''],       // 需要使用的的插件列表，如比例尺'AMap.Scale'等
       }).then((AMap)=>{
         // 直接将AMap保存出来 因为不止创建地图需要她
-        this.AMap = AMap;
+        amap = AMap;
         this.createMap();
         this.initLabelLayers();
+        this.initMqtt();
       }).catch(e=>{
         console.error('error: ',e);
       })
     },
     // 初始化地图
     createMap() {
-      this.map = new this.AMap.Map("container",{  //设置地图容器id
+      map = new amap.Map("container",{  //设置地图容器id
         viewMode:"2D",    //是否为3D地图模式
         zoom:5,           //初始化地图级别
         center:[105.602725,37.076636], //初始化地图中心点位置
@@ -56,7 +61,7 @@ export default {
     },
     // 初始化labellayers 
     initLabelLayers() {
-      this.labelsLayer = new this.AMap.LabelsLayer({
+        layer = new amap.LabelsLayer({
         zooms: [3, 20],
         zIndex: 1000,
         // 该层内标注是否避让
@@ -65,7 +70,7 @@ export default {
         allowCollision: true,
       });
       // 将图层添加到地图上
-      this.map.add(this.labelsLayer);
+      map.add(layer);
     },
     // 初始化mqtt客户端
     initMqtt() {
@@ -104,6 +109,8 @@ export default {
     },
     createVistor(v) {
       var arr = v.toString().split(',');
+      console.log("游客对象创建成功");
+      console.log(arr);
       // console.log(arr);
       // 1.clientId 2.姓名 3.体温 4.充值 5.消费 6.消费产品名称 7.位置 8.位置
       var person = new vistor(arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7]);
@@ -145,7 +152,7 @@ export default {
         }
       }
       text.content = p.name + ' ' + p.bodyTem + ' ' + p.deposit + ' ' + p.consume + ' ' + p.goodsName; 
-      var labelMarker = new this.AMap.LabelMarker({
+      var marker = new amap.LabelMarker({
         name: p.clientId, // 此属性非绘制文字内容，仅最为标识使用
         position: [p.positionLong, p.positionLati],
         zIndex: 16,
@@ -153,13 +160,17 @@ export default {
         icon: icon,
         // 将第二步创建的 text 对象传给 text 属性
         text: text,
-      })
-      this.labelsLayer.add(labelMarker);
+      });
+      // 将marker添加到layer图层
+      layer.add(marker);
     },
     updateVistor(p) {
-      var arr = p.split(',');
+      var arr = p.toString().split(',');
+      console.log("接收到的游客数据")
+      console.log(arr);
       // 根据游客id获取对象
-      var person = vistors.get(p.clientId);
+      var person = vistors.get(arr[0]);
+      if(person == undefined) return;
       // 体温需要更新 
       person.bodyTem = arr[2];
       // 充值金额需要更新
@@ -172,15 +183,15 @@ export default {
       person.positionLong = arr[6];
       // 纬度需要更新
       person.positionLati = arr[7];
+      console.log("更改后的游客信息")
+      console.log(vistors);
     },
     // 监控平台6分钟更新一次
     update_vistors_model() {
+      console.log("监控平台开始更新");
       // 1.先清空地图的游客标记
-      // 先获取labelLayers图层上的所有marker
-      var vistors_model = this.labelsLayer.getAllOverlays('marker');
       // 移除labelLayers图层上的所有marker
-      this.labelsLayer.remove(vistors_model);
-      vistors_model.length = 0;
+      layer.clear();
       // 2.根据vistors游客对象重新创建marker
       var icon = {
         type: 'image',
@@ -209,21 +220,23 @@ export default {
         }
       }
       // 3.遍历map，创建marker 
-      for (var [clientId, p] of vistors) {
-        text.content = p.name + ' ' + p.bodyTem + ' ' + p.deposit + ' ' + p.consume + ' ' + p.goodsName; 
-        var labelMarker = new this.Amap.LabelMarker({
-          name: clientId, // 此属性非绘制文字内容，仅最为标识使用
-          position: [p.positionLong, p.positionLati],
+      var markers = [];
+      for (var [key, value] of vistors) {
+        text.content = value.name + ' ' + value.bodyTem + ' ' + value.deposit + ' ' + value.consume + ' ' + value.goodsName; 
+        var marker = new amap.LabelMarker({
+          name: value, // 此属性非绘制文字内容，仅最为标识使用
+          position: [value.positionLong, value.positionLati],
           zIndex: 16,
           // 将第一步创建的 icon 对象传给 icon 属性
           icon: icon,
           // 将第二步创建的 text 对象传给 text 属性
           text: text,
         })
-        vistors_model.push(labelMarker);
+        console.log(marker);
+        markers.push(marker);
       }
       // 一次性将游客marker添加到labelsLayer图层
-      this.labelsLayer.add(vistors_model);
+      layer.add(markers);
     },
     // 销毁游客实例，1.从vistors map对象删除  2.从vistors_model数组移除  3.从labelLayer移除
     destroyVistor(p) {
@@ -232,19 +245,19 @@ export default {
       // 2.从vistors_model数组移除
       var index;
       // 获取markers
-      var vistors_model = this.labelsLayer.getAllOverlays('marker');
-      for(var i = 0; i < vistors_model.length; i++) {
-        if(vistors_model[i].name== p.clientId) {
+      var markers = layer.getAllOverlays('marker');
+      for(var i = 0; i < markers.length; i++) {
+        if(markers[i].name== p.clientId) {
           index = i;
           break;
         }
       }
-      if(index == vistors_model.length) {
+      if(index == markers.length) {
         alert("该游客不存在");
       }
       else {
         // 3.将要销毁的游客marker从labelsLayer图层删除
-        this.labelsLayer.remove(vistors_model[index]);
+        layer.remove(markers[index]);
       }
     }
   },

@@ -13,7 +13,7 @@
 					</el-submenu>
 					<el-submenu index="3" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template slot="title"><i class="el-icon-plus"></i>门票管理</template>
-						<el-menu-item index="addShop">售票</el-menu-item>
+						<el-menu-item index="sellTicket">售票</el-menu-item>
 						<el-menu-item index="addGoods">门票统计</el-menu-item>
 					</el-submenu>
 					<el-submenu index="4" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
