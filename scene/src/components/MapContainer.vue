@@ -1,5 +1,22 @@
 <template>
-    <div id="container"></div>
+    <div id="container">
+      <el-row :gutter="20">
+        <el-col :span="3" :offset="21">
+          <el-dropdown split-button type="primary" @command="handleClick">
+            功能菜单
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="1">禁区围栏</el-dropdown-item>
+              <el-dropdown-item command="2">景点围栏</el-dropdown-item>
+              <el-dropdown-item command="3">距离测量</el-dropdown-item>
+              <el-dropdown-item command="4">限定/取消限定景区</el-dropdown-item>
+              <el-dropdown-item command="5">游客求助路径规划</el-dropdown-item>
+              <el-dropdown-item command="6">撤消围栏</el-dropdown-item>
+
+            </el-dropdown-menu>
+          </el-dropdown>
+        </el-col>
+      </el-row>
+    </div>
 </template>
 
 <script>
@@ -17,11 +34,21 @@ var amap = null;
 var map = null;
 var layer = null;
 // 这是游客标记  因为可以直接获取markers
-// var vistors_model = [];  // 必须将marker保存
+// var vistors_model = [];  
+// 因为不频繁更新所以可以放data
+// var mousetool = new amap.MouseTool(map);
+var mousetool = null;
+var overlays = [];
+// var overlay = '';
+// mousetool.on("draw", function(e) {
+//   overlay.push(e.obj);
+// })
+var ruler = null; 
 export default {
   data() {
     return{
       client: '',
+      limit: false,
       // AMap: null,   // AMap 类
       // map: null,    // 地图对象
       // labelsLayer: null,  // LabelsLayer 图层对象
@@ -40,12 +67,24 @@ export default {
       AMapLoader.load({
         key:"9909d8d88b176d44601f698bcea8e29a",             // 申请好的Web端开发者Key，首次调用 load 时必填
         version:"2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins:[''],       // 需要使用的的插件列表，如比例尺'AMap.Scale'等
+        plugins:["AMap.MouseTool", "AMap.RangingTool"],       // 需要使用的的插件列表，如比例尺'AMap.Scale'等
       }).then((AMap)=>{
         // 直接将AMap保存出来 因为不止创建地图需要她
         amap = AMap;
         this.createMap();
         this.initLabelLayers();
+        mousetool = new amap.MouseTool(map);
+        mousetool.on("draw", function(e) {
+          // overlay = e.obj;
+          // console.log(e.obj.getOptions());
+          overlays.push(e.obj);
+          alert("你可以通过功能菜单的撤销围栏撤销最新绘制的围栏")
+        });
+        ruler = new amap.RangingTool(map); 
+        ruler.on("end", function(target, polyline, points, distance) {
+          ruler.turnOff();
+          alert("测量工具已关闭")
+        })
         this.initMqtt();
       }).catch(e=>{
         console.error('error: ',e);
@@ -232,11 +271,42 @@ export default {
           // 将第二步创建的 text 对象传给 text 属性
           text: text,
         })
-        console.log(marker);
+        // console.log(marker);
+
         markers.push(marker);
+
       }
       // 一次性将游客marker添加到labelsLayer图层
       layer.add(markers);
+
+      // 判断游客是否进入了电子围栏区域，提示游客和管理员
+      // 外层：电子围栏区域
+      for(var i = 0; i < overlays.length; i++) {
+        // 内层：游客
+        for(var [clientId, vistor] of vistors) {
+          if(overlays[i].getOptions().extData.info == "危险地区" && overlays[i].contains([vistor.positionLong, vistor.positionLati])) {
+            // 通知游客
+            // 1.制作游客的topic
+            var topic_danger = "mqtt/danger_tip/" + clientId;
+            // 2.警报信息
+            var danger_tip = "你已经进入了危险地区, 请离开";
+            // 3.发送给对应的游客
+            this.client.publish(topic_danger, danger_tip, function(err) {
+              console.log(err);
+            })
+          }
+          else if(overlays[i].getOptions().extData.info != "危险地区" && overlays[i].contains([vistor.positionLong, vistor.positionLati])) {
+            // 1.制作游客的topic
+            var topic_scene = "mqtt/scene_tip/" + clientId;
+            // 2.警报信息
+            var scene_tip = "你已经进入" + overlays[i].getOptions().extData.info + "景点";
+            // 3.发送给对应的游客
+            this.client.publish(topic_scene, scene_tip, function(err) {
+              console.log(err);
+            })
+          }
+        }
+      }
     },
     // 销毁游客实例，1.从vistors map对象删除  2.从vistors_model数组移除  3.从labelLayer移除
     destroyVistor(p) {
@@ -259,16 +329,107 @@ export default {
         // 3.将要销毁的游客marker从labelsLayer图层删除
         layer.remove(markers[index]);
       }
+    },
+    open() {
+      this.$prompt('请输入景点名称', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+      }).then(({ value }) => {
+        this.$message({
+          type: 'success',
+          message: '添加了' + value + '景点'
+        });
+        var opt_scene = {
+          fillColor: '#67C23A',
+          info: value
+        }
+        this.draw(opt_scene);
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '取消输入'
+        });       
+      });
+    },
+    handleClick(command) {
+      switch(command) {
+        case "1":
+          var opt_danger = {
+            fillColor: '#F56C6C',
+            extData: {
+              info: '危险地区'
+            }
+          }
+          this.draw(opt_danger);
+          break;
+        case "2":
+          this.open()
+          break;
+        case "3":
+          this.distance_messure();
+          break;
+        case "4":
+          this.set_scene();
+          break;
+        case "5":
+          this.generate_way();
+          break;
+        case "6":
+          this.clear_draw();
+          break;
+        default:
+          alert("无该功能");
+      }
+
+    },
+    draw(opt) {
+      mousetool.polygon(opt);
+    },
+    distance_messure() {
+      alert("测量工具已开启")
+      ruler.turnOn();
+    },
+    set_scene() {
+      if(!this.limit){
+        var bounds = map.getBounds();
+        map.setLimitBounds(bounds);
+        alert("限定景区显示范围已开启");
+        this.limit = ~this.limit;
+      }
+      else {
+        map.clearLimitBounds();
+        alert("限定景区显示范围已关闭");
+        this.limit = ~this.limit;
+      }
+    },
+    generate_way() {
+
+    },
+    clear_draw() {
+      map.remove(overlays.pop());
     }
+
   },
+
 }
 </script>
 
-<style  scoped>
+<style lang="less"  scoped>
+  // @import '@/assets/css/common';
   #container{
     padding:0px;
     margin: 0px;
     width: 100%;
     height: 800px;
+  }
+  .el-dropdown {
+    z-index: 1000;
+    vertical-align: top;
+  }
+  .el-dropdown + .el-dropdown {
+    margin-left: 15px;
+  }
+  .el-icon-arrow-down {
+    font-size: 12px;
   }
 </style>

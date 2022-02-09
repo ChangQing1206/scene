@@ -70,7 +70,7 @@
     .wh(60px, 60px);
 		border-radius: 50%;
 		margin-right: 37px;
-    background-color: #324057;
+    background-color: #409EFF;
     text-align: center;
     line-height: 60px;
     color: bisque;
