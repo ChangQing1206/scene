@@ -147,16 +147,25 @@ export default {
       });
     },
     createVistor(v) {
-      var arr = v.toString().split(',');
-      console.log("游客对象创建成功");
-      console.log(arr);
+      // 更改写法 使用 JSON.stringify():对象转字符串 JSON.parse()字符串解析为对象
+      // var arr = v.toString().split(',');
+      // console.log("游客对象创建成功");
+      // console.log(arr);
       // console.log(arr);
       // 1.clientId 2.姓名 3.体温 4.充值 5.消费 6.消费产品名称 7.位置 8.位置
-      var person = new vistor(arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7]);
+      v = JSON.parse(v.toString());
+      var clientId = v.clientId;
+      var name = v.name;
+      var bodyTem = v.bodyTem;
+      var deposit = v.deposit;
+      var consume = v.consume;
+      var goodsName = v.goodsName;
+      var postion = v.position;
+      var person = new vistor(clientId, name, bodyTem, deposit, consume, goodsName, postion[0], postion[1]);
       // 键：clientId 值：游客对象
       // 调用游客对象的创建游客标记方法，在地图上创建标记  不合理
       // 新建的游客对象添加进游客map
-      vistors.set(arr[0], person);
+      vistors.set(clientId, person);
       // 更新游客标记
       this.creat_vistor_model(person);
     },
@@ -204,24 +213,25 @@ export default {
       layer.add(marker);
     },
     updateVistor(p) {
-      var arr = p.toString().split(',');
-      console.log("接收到的游客数据")
-      console.log(arr);
+      // var arr = p.toString().split(',');
+      // console.log("接收到的游客数据")
+      // console.log(arr);
+      p = JSON.parse(p.toString());
       // 根据游客id获取对象
-      var person = vistors.get(arr[0]);
+      var person = vistors.get(p.clientId);
       if(person == undefined) return;
       // 体温需要更新 
-      person.bodyTem = arr[2];
+      person.bodyTem = p.bodyTem;
       // 充值金额需要更新
-      person.deposit = arr[3];
+      person.deposit = p.deposit;
       // 消费金额需要更新
-      person.consume = arr[4];
+      person.consume = p.consume;
       // 消费产品需要更新
-      person.goodsName = arr[5];
+      person.goodsName = p.goodsName;
       // 经度需要更新
-      person.positionLong = arr[6];
+      person.positionLong = p.position[0];
       // 纬度需要更新
-      person.positionLati = arr[7];
+      person.positionLati = p.position[1];
       console.log("更改后的游客信息")
       console.log(vistors);
     },
