@@ -22,6 +22,9 @@
 <script>
 import AMapLoader from '@amap/amap-jsapi-loader';
 import vistor from '@/utils/vistor';
+import {updateScene} from '@/api/api'
+// 用于存储景区电子围栏
+// import store from '@/store/store'
 // var vistor = require('@/utils/vistor')
 import * as mqtt from "mqtt";
 // 设置为全局变量 否则vue将要消耗大量性能  因为不需要对游客对象实时监听
@@ -78,6 +81,9 @@ export default {
           // overlay = e.obj;
           // console.log(e.obj.getOptions());
           overlays.push(e.obj);
+          // 判断是否是景区电子围栏,如果是的话,则写入 Vuex
+          // store.state.scenePoint = e.obj;
+          // 而且应该要在初始化时,将AMap.GeometryUtil.isPointInRing函数存储到Vuex
           alert("你可以通过功能菜单的撤销围栏撤销最新绘制的围栏")
         });
         ruler = new amap.RangingTool(map); 
@@ -289,6 +295,14 @@ export default {
       // 一次性将游客marker添加到labelsLayer图层
       layer.add(markers);
 
+      // 判断体温是否异常
+      for(var [clientId, vistor] of vistors) {
+        if(vistors.bodyTem > 37.3) {
+          // 通知游客
+        }
+      }
+
+
       // 判断游客是否进入了电子围栏区域，提示游客和管理员
       // 外层：电子围栏区域
       for(var i = 0; i < overlays.length; i++) {
@@ -308,15 +322,27 @@ export default {
           else if(overlays[i].getOptions().extData.info != "危险地区" && overlays[i].contains([vistor.positionLong, vistor.positionLati])) {
             // 1.制作游客的topic
             var topic_scene = "mqtt/scene_tip/" + clientId;
+            var scenePoint = overlays[i].getOptions().extData.info;
             // 2.警报信息
-            var scene_tip = "你已经进入" + overlays[i].getOptions().extData.info + "景点";
+            var scene_tip = "你已经进入" + scenePoint + "景点";
             // 3.发送给对应的游客
             this.client.publish(topic_scene, scene_tip, function(err) {
               console.log(err);
             })
+            // 4.将去过的景点上传数据库 参数游客id 和 景点
+            this.updateScene(clientId, scenePoint);
           }
         }
       }
+    },
+    updateScene(id, scene) {
+      updateScene({clientId: id, sceneVisited: scene}).then(res => {
+        if(res.status == 1) {
+          console.log("游客去过的景点更新成功");
+        }
+      }).catch(err => {
+        console.log(err);
+      })
     },
     // 销毁游客实例，1.从vistors map对象删除  2.从vistors_model数组移除  3.从labelLayer移除
     destroyVistor(p) {
@@ -390,7 +416,6 @@ export default {
         default:
           alert("无该功能");
       }
-
     },
     draw(opt) {
       mousetool.polygon(opt);
@@ -418,9 +443,7 @@ export default {
     clear_draw() {
       map.remove(overlays.pop());
     }
-
   },
-
 }
 </script>
 

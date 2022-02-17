@@ -8,6 +8,8 @@ const state = {
 	adminInfo: {
 		// avatar: 'default.jpg'
 	},
+	// 景区电子围栏 在平台数据更新时,同时更新数据库
+	// sceneFence: []
 }
 
 const mutations = {
