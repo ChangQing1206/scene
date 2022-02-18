@@ -60,7 +60,6 @@ export default {
   },
   mounted() {
     this.initMap();
-    
     // setInterval()的this 有问题
     setInterval(this.update_vistors_model, 30000); // 定时器 6分钟更新一次
   },
@@ -296,8 +295,8 @@ export default {
       layer.add(markers);
 
       // 判断体温是否异常
-      for(var [clientId, vistor] of vistors) {
-        if(vistors.bodyTem > 37.3) {
+      for(var [id, v] of vistors) {
+        if(v.bodyTem > 37.3) {
           // 通知游客
         }
       }
@@ -329,8 +328,8 @@ export default {
             this.client.publish(topic_scene, scene_tip, function(err) {
               console.log(err);
             })
-            // 4.将去过的景点上传数据库 参数游客id 和 景点
-            this.updateScene(clientId, scenePoint);
+            // 4.将去过的景点上传数据库  游客ID 以及 景点
+            this.updateScene(clientId, vistor.name, scenePoint);
           }
         }
       }

@@ -33,7 +33,7 @@
               <el-form-item label="游客最高体温记录">
                 <span>{{ props.row.bodyTemMax }}</span>
               </el-form-item>
-              <el-form-item label="游客充值记录">
+              <!-- <el-form-item label="游客充值记录">
                 <span>{{ props.row.deposit }}</span>
               </el-form-item>
               <el-form-item label="游客消费记录">
@@ -41,7 +41,7 @@
               </el-form-item>
               <el-form-item label="游客消费商品记录">
                 <span>{{ props.row.goodsName }}</span>
-              </el-form-item>
+              </el-form-item> -->
               <el-form-item label="游客去过的景点">
                 <span>{{ props.row.scenePoint }}</span>
               </el-form-item>
@@ -105,7 +105,7 @@
         count: 0,                  // 游客总数量
         tableData: [],             // 游客数据
         currentPage: 1,            // 当前分页
-        expendRow: [],
+        // expendRow: [],
       }
     },
     created(){
@@ -147,11 +147,11 @@
               tableData.clientId = vistor.clientId;
               tableData.name = vistor.name;
               tableData.bodyTemMax = vistor.bodyTemMax; // 最大值聚合
-              tableData.deposit = vistor.deposit; // 去重聚合
-              tableData.consume = vistor.consume; // 去重聚合
+              // tableData.deposit = vistor.deposit; // 去重聚合
+              // tableData.consume = vistor.consume; // 去重聚合
               tableData.bodyTem = vistor.bodyTem;   // 用于展示体温变化
-              tableData.position = vistor.position; // 用于计算游客去过的景点
-              tableData.goodsName = vistor.goodsName; 
+              // tableData.position = vistor.position; // 用于计算游客去过的景点
+              // tableData.goodsName = vistor.goodsName; 
               tableData.time = vistor.date; // 保存时间数组
               tableData.scenePoint = vistor.scenePoint; // 游客去过的景点
               this.tableData.push(tableData);
@@ -179,8 +179,8 @@
       expand(row, expandedRows){
         if(expandedRows.includes(row)) {
           // 移除该展开行数据
-          const index = this.expendRow.indexOf(row.index);
-          this.expendRow.splice(index, 1);
+          // const index = this.expendRow.indexOf(row.index);
+          // this.expendRow.splice(index, 1);
         }
         else {
           // 生成体温变化图 
@@ -217,7 +217,7 @@
       // 删除游客
       handleDelete(index, row) {
         // 根据游客id删除游客
-        deleteVistor(row.clientId).then(res => {
+        deleteVistor({clientId: row.clientId}).then(res => {
           if(res.status == 1) {
             this.$message({
               type: 'success',
@@ -240,7 +240,7 @@
   }
 </script>
 
-<style lang="less">
+<style lang="less" scoped>
 	@import '@/assets/css/mixin';
     .demo-table-expand {
       font-size: 0;

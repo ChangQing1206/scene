@@ -8,6 +8,7 @@
           <el-submenu index="2" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template slot="title"><i class="el-icon-document"></i>数据管理</template>
 						<el-menu-item index="dataCheck">游客数据查询</el-menu-item>
+						<el-menu-item index="consumeCheck">游客消费查询</el-menu-item>
 						<el-menu-item index="posAnalysis">游客位置分析</el-menu-item>
             <el-menu-item index="consumeAnalysis">游客消费分析</el-menu-item>
 					</el-submenu>

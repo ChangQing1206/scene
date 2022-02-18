@@ -6,6 +6,8 @@ import home from '@/views/home.vue'
 import sellTicket from '@/views/sellTicket.vue'
 import ticketStatistics from '@/views/ticketStatistics.vue'
 import dataCheck from '@/views/dataCheck.vue'
+import consumeCheck from '@/views/consumeCheck.vue'
+import depositCheck from '@/views/depositCheck.vue'
 import posAnalysis from '@/views/posAnalysis.vue'
 import consumeAnalysis from '@/views/consumeAnalysis.vue'
 import adminSet from '@/views/adminSet.vue'
@@ -46,6 +48,14 @@ const routes = [
 			path: '/consumeAnalysis',
 			component: consumeAnalysis,
 			meta: ['数据管理', '游客消费分析'],
+		},{
+			path: '/consumeCheck',
+			component: consumeCheck,
+			meta: ['数据管理', '游客消费查询'],
+		},{
+			path: '/depositCheck',
+			component: depositCheck,
+			meta: ['数据管理', '游客充值查询'],
 		},{
 			path: '/adminSet',
 			component: adminSet,
