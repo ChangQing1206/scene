@@ -95,7 +95,7 @@
 <script>
   import headTop from '../components/headTop'
   import echarts from 'echarts'
-  import {getVistors, getVistorsCount, deleteVistor} from '@/api/getData'
+  import {getVistors, getVistorsCount, deleteVistor} from '@/api/api'
   export default {
     data(){
       return {

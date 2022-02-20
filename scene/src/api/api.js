@@ -89,3 +89,9 @@ export const goodsAnalyse = () => request('get', '/api/vistor/analyse/goods');
   */
 
 export const posAnalyse = () => request('get', '/api/vistor/analyse/position');
+
+/** 
+ * 创建门票
+ */
+
+export const createTicket = data => request('post', '/api/ticket/createTicket', data);

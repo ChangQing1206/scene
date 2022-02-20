@@ -130,5 +130,5 @@ export default {
 
 
 <style lang="less" scoped>
-  @import "@/assets/css/mixin"
+  @import "@/assets/css/mixin";
 </style>

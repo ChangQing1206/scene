@@ -1,124 +1,165 @@
 <template>
-<div id="container">
-  <head-top></head-top>
-</div>
+  <div class="fillcontain">
+    <!-- 售票系统 -->
+    
+    <head-top></head-top>
+    <div class="ticket-area lr_in">
+      <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm">
+        <el-form-item label="游客姓名" prop="name">
+          <el-input v-model="ruleForm.name"></el-input>
+        </el-form-item>
+        <el-form-item label="游客身份证" prop="identity">
+          <el-input v-model="ruleForm.identity"></el-input>
+        </el-form-item>
+        <el-form-item label="游客体温" prop="bodyTem">
+          <el-input v-model.number="ruleForm.bodyTem"></el-input>
+        </el-form-item>
+        <el-form-item label="游客位置" prop="position">
+          <el-input v-model="ruleForm.position"></el-input>
+        </el-form-item>
+        <el-form-item label="门票状态" prop="status">
+          <el-select v-model="ruleForm.status" placeholder="选择门票状态">
+            <el-option label="未使用" value="unuse"></el-option>
+            <el-option label="使用中" value="using"></el-option>
+            <el-option label="已报废" value="expired"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="submitForm('ruleForm')">立即出票</el-button>
+          <el-button @click="resetForm('ruleForm')">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+    
+  </div>
 </template>
 
 <script>
-
+import * as mqtt from "mqtt";
+import { createTicket } from '@/api/api';
 import headTop from '@/components/headTop'
-import AMapLoader from '@amap/amap-jsapi-loader';
-var amap = null;
-var map = null;
-var labelsLayer = null;
-var vistors_model = [];
 export default {
+  data() {
+    var validateId = (rule, value, callback) => {
+      // 生成身份证正则表达式
+      var regx = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/;
+      if(regx.test(value)) callback();
+      else callback(new Error("身份证格式错误!"));
+    }
+    var validateNumber = (rule, value, callback) => {
+      if( typeof value == 'number') callback();
+      else callback(new Error("体温必须为数字"));
+    }
+    return {
+      client: '', // 售票客户端
+      vistorId: '',
+      ruleForm: {
+        name: '',
+        identity: '',
+        bodyTem: '',
+        position: [113.086051,22.600441],
+        status: '',
+      },
+      rules: {
+        name: [
+          { required: true, message: '请输入游客姓名', trigger: 'blur' },
+          { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+        ],
+        // 自定义规则验证身份证 
+        identity: [
+          { required: true, message: '请输入身份证', trigger: 'blur'},
+          { validator: validateId, trigger: 'blur'}
+        ],
+        bodyTem: [
+          { required: true, message: '请输入游客体温', trigger: 'blur'},
+          { validator: validateNumber, message: '体温必须为数字'}
+        ]
+      }
+    }
+  },
   components: {
     headTop
   },
-  mounted() {
-    this.initMap();
-    // setInterval(this.create, 10000);
-    
-    setTimeout(this.update, 10000);
+  create() {
+    // 初始化mqtt客户端
+    this.initMqtt();
   },
   methods: {
-    // 获取AMap类
-    initMap() {
-      AMapLoader.load({
-        key:"9909d8d88b176d44601f698bcea8e29a",             // 申请好的Web端开发者Key，首次调用 load 时必填
-        version:"2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
-        plugins:[''],       // 需要使用的的插件列表，如比例尺'AMap.Scale'等
-      }).then((AMap)=>{
-        // 直接将AMap保存出来 因为不止创建地图需要她
-        amap = AMap;
-        this.createMap();
-        this.initLabelLayers();
-        this.create();
-      }).catch(e=>{
-        console.error('error: ',e);
-      })
-    },
-    // 初始化地图
-    createMap() {
-      map = new amap.Map("container",{  //设置地图容器id
-        viewMode:"2D",    //是否为3D地图模式
-        zoom:5,           //初始化地图级别
-        center:[105.602725,37.076636], //初始化地图中心点位置
-      });
-    },
-    // 初始化labellayers 
-    initLabelLayers() {
-        labelsLayer = new amap.LabelsLayer({
-        zooms: [3, 20],
-        zIndex: 1000,
-        // 该层内标注是否避让
-        collision: true,
-        // 设置 allowCollision：true，可以让标注避让用户的标注
-        allowCollision: true,
-      });
-
-      // 将图层添加到地图上
-      map.add(labelsLayer);
-    },
-    create() {
-           // 设置图标对象
-      var icon = {
-        // 图标类型，现阶段只支持 image 类型
-        type: 'image',
-        // 图片 url
-        image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
-        size: [18, 27],
-        anchor: 'bottom-center',
-      }
-      // 设置文本对象
-      var text = {
-        // 要展示的文字内容
-        content: '',
-        // 文字方向，有 icon 时为围绕文字的方向，没有 icon 时，则为相对 position 的位置
-        direction: 'right',
-        // 在 direction 基础上的偏移量
-        offset: [-20, -5],
-        // 文字样式
-        style: {
-            // 字体大小
-            fontSize: 12,
-            // 字体颜色
-            fillColor: '#22886f',
-            // 描边颜色
-            strokeColor: '#fff',
-            // 描边宽度
-            strokeWidth: 2,
+    initMqtt() {
+      // 1.连接mqtt服务器
+      this.client = mqtt.connect("ws://localhost:3010");
+      // 2.订阅获取clientId的主题 获取clientId通信
+      this.client.subscribe("ticket/get_clientId");
+      this.client.on('message', (topic, payload) => {
+        switch(topic) {
+          case "ticket/get_clientId":
+            this.vistorId = payload.toString();
+            alert("游客设备"+this.vistorId+"可以出票了");
+            break;
+          default:
+            console.log("主题错误");
+            break;
         }
-      }
-      text.content = '电脑上看尽快';
-      var longtitude = Number((Math.random()/100 + 113.08).toFixed(6))
-      var latitude = Number((Math.random()/100*2 + 22.58).toFixed(6));
-      var labelMarker = new amap.LabelMarker({
-        name: '1', // 此属性非绘制文字内容，仅最为标识使用
-        position: [longtitude, latitude],
-        zIndex: 16,
-        // 将第一步创建的 icon 对象传给 icon 属性
-        icon: icon,
-        // 将第二步创建的 text 对象传给 text 属性
-        text: text,
       })
-      // vistors_model.push(labelMarker);
-
-      labelsLayer.add(labelMarker);
-      console.log("labelMarkder")
-      // console.log(labelsLayer.getAllOverlays('marker'));
-
     },
-    update() {
-
-      console.log(labelsLayer.getAllOverlays('marker'))
+    submitForm(formName) {
+      this.$refs[formName].validate((valid) => {
+        if (valid) {
+          // 验证成功 发送至 特定client
+          var topic = "vistor/create_ticket/" + this.vistorId;
+          var content = {
+            name: this.name,
+            identity: this.identity,
+            bodyTem: this.bodyTem,
+            position: this.position,
+            status: this.status
+          }
+          // 发送门票信息给游客设备
+          this.client.publish(topic, JSON.stringify(content), (err) => {
+            if(err) alert("门票创建失败!");
+            // 写入数据库
+            this.createTicket(content);
+          })
+        } else {
+          console.log('error submit!!');
+          return false;
+        }
+      });
+    },
+    resetForm(formName) {
+      this.$refs[formName].resetFields();
+    },
+    createTicket(ticket) {
+      createTicket(ticket).then(res => {
+        if(res.status == "1") {
+          this.$message({
+            type: 'success',
+            message: '门票创建成功'
+          })
+        }else {
+          this.$message({
+            type: 'error',
+            message: '门票创建失败'
+          })
+        }
+      }).catch( err => {
+          this.$message({
+            type: 'error',
+            message: err
+          })
+      })
     }
-
   }
+
 }
 </script>
 
-<style scoped>
+<style lang="less">
 
+  @import '@/assets/css/common';
+  @import '@/assets/css/mixin';
+  .ticket-area {
+    width: 60vw;
+    margin-top: 100px;
+  }
 </style>
