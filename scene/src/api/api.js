@@ -95,3 +95,9 @@ export const posAnalyse = () => request('get', '/api/vistor/analyse/position');
  */
 
 export const createTicket = data => request('post', '/api/ticket/createTicket', data);
+
+/** 
+ * 获取门票信息
+ */
+
+export const getTickets = data => request('post', '/api/ticket/getTickets', data)

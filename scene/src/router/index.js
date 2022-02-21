@@ -16,7 +16,7 @@ import monitor from '@/views/monitor.vue'
 
 Vue.use(vuerouter)
 const routes = [
-  // { path: '/', name: 'login', component: login },
+  { path: '/', name: 'login', component: login },
   { path: '/manage', 
     name: 'manage', 
     component: manage,

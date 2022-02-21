@@ -12,10 +12,13 @@
           <el-input v-model="ruleForm.identity"></el-input>
         </el-form-item>
         <el-form-item label="游客体温" prop="bodyTem">
-          <el-input v-model.number="ruleForm.bodyTem"></el-input>
+          <el-input v-model="ruleForm.bodyTem"></el-input>
         </el-form-item>
-        <el-form-item label="游客位置" prop="position">
-          <el-input v-model="ruleForm.position"></el-input>
+        <el-form-item label="游客经度" prop="positionLong">
+          <el-input v-model="ruleForm.position[0]"></el-input>
+        </el-form-item>
+        <el-form-item label="游客纬度" prop="positionLati">
+          <el-input v-model="ruleForm.position[1]"></el-input>
         </el-form-item>
         <el-form-item label="门票状态" prop="status">
           <el-select v-model="ruleForm.status" placeholder="选择门票状态">
@@ -39,6 +42,11 @@ import * as mqtt from "mqtt";
 import { createTicket } from '@/api/api';
 import headTop from '@/components/headTop'
 export default {
+  mounted() {
+    // 初始化mqtt客户端
+    console.log("售票系统开始")
+    this.initMqtt();
+  },
   data() {
     var validateId = (rule, value, callback) => {
       // 生成身份证正则表达式
@@ -47,7 +55,7 @@ export default {
       else callback(new Error("身份证格式错误!"));
     }
     var validateNumber = (rule, value, callback) => {
-      if( typeof value == 'number') callback();
+      if( typeof Number(value) == 'number') callback();
       else callback(new Error("体温必须为数字"));
     }
     return {
@@ -80,14 +88,11 @@ export default {
   components: {
     headTop
   },
-  create() {
-    // 初始化mqtt客户端
-    this.initMqtt();
-  },
   methods: {
     initMqtt() {
       // 1.连接mqtt服务器
       this.client = mqtt.connect("ws://localhost:3010");
+      console.log("连接mqtt成功")
       // 2.订阅获取clientId的主题 获取clientId通信
       this.client.subscribe("ticket/get_clientId");
       this.client.on('message', (topic, payload) => {
@@ -108,12 +113,13 @@ export default {
           // 验证成功 发送至 特定client
           var topic = "vistor/create_ticket/" + this.vistorId;
           var content = {
-            name: this.name,
-            identity: this.identity,
-            bodyTem: this.bodyTem,
-            position: this.position,
-            status: this.status
+            name: this.ruleForm.name,
+            identity: this.ruleForm.identity,
+            bodyTem: this.ruleForm.bodyTem,
+            position: this.ruleForm.position,
+            status: this.ruleForm.status
           }
+          console.log(content)
           // 发送门票信息给游客设备
           this.client.publish(topic, JSON.stringify(content), (err) => {
             if(err) alert("门票创建失败!");
