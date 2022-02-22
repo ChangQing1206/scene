@@ -121,28 +121,28 @@ export default {
       // 1.连接mqtt服务器
       this.client = mqtt.connect("ws://localhost:3010");
       // 2.订阅创建游客标记的主题，处理游客的创建
-      this.client.subscribe("mqtt/create_vistor_model");
+      this.client.subscribe("vistor/create_vistor_model");
       // 3.订阅游客数据上传的主题，处理游客的数据上传
-      this.client.subscribe("mqtt/update_vistor_model");
+      this.client.subscribe("vistor/update_vistor_model");
       // 4.订阅销毁游客标记的主题，处理游客的销毁
-      this.client.subscribe("mqtt/destroy_vistor_model");
+      this.client.subscribe("vistor/destroy_vistor_model");
       // 5.订阅游客求助的主题，处理游客的求助
-      this.client.subscribe("mqtt/vistor_help");
+      this.client.subscribe("vistor/vistor_get_help");
       // 6.等待mqtt服务器回应,根据topic的类型，选择不同的处理方法  优化：策略模式
       this.client.on("message", (topic, payload) => {
         // client.end();
         switch(topic) {
           // 游客创建 立刻更新
-          case "mqtt/create_vistor_model":
+          case "vistor/create_vistor_model":
             this.createVistor(payload);
             break;
-          case "mqtt/update_vistor_model":
+          case "vistor/update_vistor_model":
             this.updateVistor(payload);
             break;
-          case "mqtt/destroy_vistor_model":
+          case "vistor/destroy_vistor_model":
             this.destroyVistor(payload);
             break;
-          case "mqtt/vistor_help":
+          case "vistor/vistor_get_help":
             this.helpVistor(payload);
             break;
           default:
@@ -153,20 +153,14 @@ export default {
     },
     createVistor(v) {
       // 更改写法 使用 JSON.stringify():对象转字符串 JSON.parse()字符串解析为对象
-      // var arr = v.toString().split(',');
-      // console.log("游客对象创建成功");
-      // console.log(arr);
-      // console.log(arr);
-      // 1.clientId 2.姓名 3.体温 4.充值 5.消费 6.消费产品名称 7.位置 8.位置
       v = JSON.parse(v.toString());
       var clientId = v.clientId;
-      var name = v.name;
-      var bodyTem = v.bodyTem;
-      var deposit = v.deposit;
-      var consume = v.consume;
-      var goodsName = v.goodsName;
-      var postion = v.position;
-      var person = new vistor(clientId, name, bodyTem, deposit, consume, goodsName, postion[0], postion[1]);
+      var identity = v.identity; // 身份证
+      var name = v.name; // 姓名
+      var bodyTem = v.bodyTem; // 体温
+      var position = v.position; // 位置
+      
+      var person = new vistor(identity, name, bodyTem, position);
       // 键：clientId 值：游客对象
       // 调用游客对象的创建游客标记方法，在地图上创建标记  不合理
       // 新建的游客对象添加进游客map
@@ -204,10 +198,10 @@ export default {
             strokeWidth: 2,
         }
       }
-      text.content = p.name + ' ' + p.bodyTem + ' ' + p.deposit + ' ' + p.consume + ' ' + p.goodsName; 
+      text.content = p.name + ' ' + p.bodyTem; // 展示内容为：游客姓名 + 游客体温
       var marker = new amap.LabelMarker({
-        name: p.clientId, // 此属性非绘制文字内容，仅最为标识使用
-        position: [p.positionLong, p.positionLati],
+        name: p.identity, // 此属性非绘制文字内容，仅最为标识使用
+        position: p.position,
         zIndex: 16,
         // 将第一步创建的 icon 对象传给 icon 属性
         icon: icon,
@@ -218,27 +212,13 @@ export default {
       layer.add(marker);
     },
     updateVistor(p) {
-      // var arr = p.toString().split(',');
-      // console.log("接收到的游客数据")
-      // console.log(arr);
       p = JSON.parse(p.toString());
-      // 根据游客id获取对象
+      // 根据游客身份证获取对象
       var person = vistors.get(p.clientId);
       if(person == undefined) return;
-      // 体温需要更新 
+      // 体温更新 位置更新
       person.bodyTem = p.bodyTem;
-      // 充值金额需要更新
-      person.deposit = p.deposit;
-      // 消费金额需要更新
-      person.consume = p.consume;
-      // 消费产品需要更新
-      person.goodsName = p.goodsName;
-      // 经度需要更新
-      person.positionLong = p.position[0];
-      // 纬度需要更新
-      person.positionLati = p.position[1];
-      console.log("更改后的游客信息")
-      console.log(vistors);
+      person.position = p.position;
     },
     // 监控平台6分钟更新一次
     update_vistors_model() {
@@ -255,41 +235,28 @@ export default {
       }
       // 设置文本对象
       var text = {
-        // 要展示的文字内容
         content: '',
-        // 文字方向，有 icon 时为围绕文字的方向，没有 icon 时，则为相对 position 的位置
         direction: 'right',
-        // 在 direction 基础上的偏移量
         offset: [-20, -5],
-        // 文字样式
         style: {
-          // 字体大小
           fontSize: 12,
-          // 字体颜色
           fillColor: '#22886f',
-          // 描边颜色
           strokeColor: '#fff',
-          // 描边宽度
-            strokeWidth: 2,
+          strokeWidth: 2,
         }
       }
       // 3.遍历map，创建marker 
       var markers = [];
       for (var [key, value] of vistors) {
-        text.content = value.name + ' ' + value.bodyTem + ' ' + value.deposit + ' ' + value.consume + ' ' + value.goodsName; 
+        text.content = value.name + ' ' + value.bodyTem; 
         var marker = new amap.LabelMarker({
           name: value, // 此属性非绘制文字内容，仅最为标识使用
           position: [value.positionLong, value.positionLati],
           zIndex: 16,
-          // 将第一步创建的 icon 对象传给 icon 属性
           icon: icon,
-          // 将第二步创建的 text 对象传给 text 属性
           text: text,
         })
-        // console.log(marker);
-
         markers.push(marker);
-
       }
       // 一次性将游客marker添加到labelsLayer图层
       layer.add(markers);
@@ -441,7 +408,10 @@ export default {
     },
     clear_draw() {
       map.remove(overlays.pop());
-    }
+    },
+
+    // 游客的基本信息插入数据库
+
   },
 }
 </script>
