@@ -100,4 +100,11 @@ export const createTicket = data => request('post', '/api/ticket/createTicket', 
  * 获取门票信息
  */
 
-export const getTickets = data => request('post', '/api/ticket/getTickets', data)
+export const getTickets = data => request('get', '/api/ticket/getTickets', data)
+
+/** 
+ * 获取门票数量
+ */
+
+export const getTicketsCount = () => request('get', '/api/ticket/getTicketsCount')
+
