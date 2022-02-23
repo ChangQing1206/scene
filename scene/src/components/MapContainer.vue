@@ -1,5 +1,6 @@
 <template>
     <div id="container">
+      <audio ref="audio"  :src="url"></audio>
       <el-row :gutter="20">
         <el-col :span="3" :offset="21">
           <el-dropdown split-button type="primary" @command="handleClick">
@@ -52,6 +53,7 @@ export default {
     return{
       client: '',
       limit: false,
+      url: '', // 这是语音的url
       // AMap: null,   // AMap 类
       // map: null,    // 地图对象
       // labelsLayer: null,  // LabelsLayer 图层对象
@@ -60,8 +62,7 @@ export default {
   },
   mounted() {
     this.initMap();
-    // setInterval()的this 有问题
-    setInterval(this.update_vistors_model, 30000); // 定时器 6分钟更新一次
+    // setInterval(this.update_vistors_model, 30000); // 定时器 6分钟更新一次
   },
   methods:{
     // 获取AMap类
@@ -154,12 +155,12 @@ export default {
     createVistor(v) {
       // 更改写法 使用 JSON.stringify():对象转字符串 JSON.parse()字符串解析为对象
       v = JSON.parse(v.toString());
-      var clientId = v.clientId;
+      var clientId = v.clientId;  // 客户端id必须要的
       var identity = v.identity; // 身份证
       var name = v.name; // 姓名
       var bodyTem = v.bodyTem; // 体温
       var position = v.position; // 位置
-      
+      // 时间不需要在这里存储
       var person = new vistor(identity, name, bodyTem, position);
       // 键：clientId 值：游客对象
       // 调用游客对象的创建游客标记方法，在地图上创建标记  不合理
@@ -200,7 +201,7 @@ export default {
       }
       text.content = p.name + ' ' + p.bodyTem; // 展示内容为：游客姓名 + 游客体温
       var marker = new amap.LabelMarker({
-        name: p.identity, // 此属性非绘制文字内容，仅最为标识使用
+        name: p.identity, // 此属性非绘制文字内容，仅最为标识使用  用于更改颜色
         position: p.position,
         zIndex: 16,
         // 将第一步创建的 icon 对象传给 icon 属性
@@ -219,6 +220,21 @@ export default {
       // 体温更新 位置更新
       person.bodyTem = p.bodyTem;
       person.position = p.position;
+      console.log("体温异常");
+      if(p.bodyTem > 37) {
+        // 通报异常
+        console.log("异常tongbao");
+        this.say("你的体温异常");
+        // 更改颜色
+
+      }
+
+    },
+    say(text) {
+      // 改变url
+      this.url = "https://tts.youdao.com/fanyivoice?word=" + text + "&le=zh&keyfrom=speaker-target";
+      // 播放语音
+      this.$refs['audio'].play();
     },
     // 监控平台6分钟更新一次
     update_vistors_model() {
@@ -260,13 +276,6 @@ export default {
       }
       // 一次性将游客marker添加到labelsLayer图层
       layer.add(markers);
-
-      // 判断体温是否异常
-      for(var [id, v] of vistors) {
-        if(v.bodyTem > 37.3) {
-          // 通知游客
-        }
-      }
 
 
       // 判断游客是否进入了电子围栏区域，提示游客和管理员

@@ -12,58 +12,37 @@
       <el-table
         :data="tableData"
         :default-sort = "{prop: 'date', order: 'descending'}"
-        @expand-change='expand'
+        @expand='expand'
+        :expand-row-keys='expendRow'
         :row-key="row => row.index"
-        highlight-current-row
         style="width: 100%">
         <el-table-column type="expand">
           <!-- slot-scope: 自定义列内容 参数是一个对象 {row, column, $index} -->
           <!-- props: 是这个列绑定的数据 -->
           <template slot-scope="props">
-            <el-form label-position="left" inline class="demo-table-expand">
-              <el-form-item label="游客ID">
-                <span>{{ props.row.clientId }}</span>
-              </el-form-item>
-              <el-form-item label="日期">
-                <span>{{ props.row.date }}</span>
-              </el-form-item>
-              <el-form-item label="游客姓名">
-                <span>{{ props.row.name }}</span>
-              </el-form-item>
-              <el-form-item label="游客最高体温记录">
-                <span>{{ props.row.bodyTemMax }}</span>
-              </el-form-item>
-              <!-- <el-form-item label="游客充值记录">
-                <span>{{ props.row.deposit }}</span>
-              </el-form-item>
-              <el-form-item label="游客消费记录">
-                <span>{{ props.row.consume }}</span>
-              </el-form-item>
-              <el-form-item label="游客消费商品记录">
-                <span>{{ props.row.goodsName }}</span>
-              </el-form-item> -->
-              <el-form-item label="游客去过的景点">
-                <span>{{ props.row.scenePoint }}</span>
-              </el-form-item>
-            </el-form>
             <!-- 体温变化图表显示区域 -->
-            <div id="echart" style="width: 600px; height:400px;"></div>
+            <div ref="echarts" style="width: 600px; height:400px;"></div>
+            <!-- 轨迹回放 https://lbs.amap.com/demo/jsapi-v2/example/marker/replaying-historical-running-data -->
+
           </template>
         </el-table-column>
         <el-table-column
           label="日期"
-          sortable
           prop="date">  
           <!-- prop="date" 这个数据来源是 tableData.date  -->
-          <i class="el-icon-date"></i>
-        </el-table-column>
-        <el-table-column
-          label="游客ID"
-          prop="clientId">
+          <!-- <i class="el-icon-date"></i> -->
         </el-table-column>
         <el-table-column
           label="游客姓名"
           prop="name">
+        </el-table-column>
+        <el-table-column
+          label="游客身份证"
+          prop="identity">
+        </el-table-column>
+        <el-table-column
+          label="当前最高体温"
+          prop="bodyTemMax">
         </el-table-column>
         <el-table-column label="操作" width="160">
           <template slot-scope="scope">
@@ -94,7 +73,7 @@
 
 <script>
   import headTop from '../components/headTop'
-  import echarts from 'echarts'
+  import * as echarts from 'echarts'
   import {getVistors, getVistorsCount, deleteVistor} from '@/api/api'
   export default {
     data(){
@@ -105,11 +84,13 @@
         count: 0,                  // 游客总数量
         tableData: [],             // 游客数据
         currentPage: 1,            // 当前分页
-        // expendRow: [],
+        expendRow: [],
       }
     },
     created(){
-      this.bodyTemChart = echarts.init(document.getElementById("echart"));
+      this.$nextTick(function () {
+        this.bodyTemChart = echarts.init(this.$ref.echarts);
+      })
       this.initData();
     },
     computed: {
@@ -125,6 +106,7 @@
           if(res.status == 1) {
             this.count = res.count;
             // 获取游客数据
+            console.log("SSS")
             this.getVistors();
           }
         }).catch(err => {
@@ -140,20 +122,19 @@
           if(res.status == 1) {
             this.tableData = [];
             const Vistor = res.data;
+            console.log(Vistor);
             Vistor.forEach((vistor, index) => {
               const tableData = {};
               // 截取日期
-              tableData.date = vistor.date[0].slice(0, 10);   // 这里是一个时间数组 YYYY-MM-DD HH:mm
-              tableData.clientId = vistor.clientId;
-              tableData.name = vistor.name;
+              tableData.name = vistor.name;  // 游客姓名
               tableData.bodyTemMax = vistor.bodyTemMax; // 最大值聚合
-              // tableData.deposit = vistor.deposit; // 去重聚合
-              // tableData.consume = vistor.consume; // 去重聚合
               tableData.bodyTem = vistor.bodyTem;   // 用于展示体温变化
-              // tableData.position = vistor.position; // 用于计算游客去过的景点
-              // tableData.goodsName = vistor.goodsName; 
-              tableData.time = vistor.date; // 保存时间数组
-              tableData.scenePoint = vistor.scenePoint; // 游客去过的景点
+              tableData.time = vistor.date_time; // 保存时间数组
+              tableData.date = tableData.time[0].slice(0,10);   // 这里是一个时间数组 YYYY-MM-DD HH:mm
+    
+              tableData.identity = vistor._id; // 身份证
+              tableData.position = vistor.position; // 用于轨迹回放
+              tableData.index = index; // 这个是索引
               this.tableData.push(tableData);
             })
           }
@@ -176,19 +157,20 @@
         this.getVistors();
       },
       // 展开行触发的操作 
-      expand(row, expandedRows){
-        if(expandedRows.includes(row)) {
-          // 移除该展开行数据
-          // const index = this.expendRow.indexOf(row.index);
-          // this.expendRow.splice(index, 1);
-        }
-        else {
+      expand(row, status){
+        if(status) {
           // 生成体温变化图 
           var time;
           for(var i = 0; i < row.time.length; i++) {
             time.push(row.time[i].slice(11, 16));
           }
           this.generateBodyTem(row.bodyTem, time);
+          this.$nextTick(() => {
+            this.expendRow.push(row.index);
+          })
+        }else{
+          const index = this.expendRow.indexOf(row.index);
+          this.expendRow.splice(index, 1)
         }
       },
       // 生成体温数据变化图
@@ -217,7 +199,7 @@
       // 删除游客
       handleDelete(index, row) {
         // 根据游客id删除游客
-        deleteVistor({clientId: row.clientId}).then(res => {
+        deleteVistor({clientId: row.identity}).then(res => {
           if(res.status == 1) {
             this.$message({
               type: 'success',
