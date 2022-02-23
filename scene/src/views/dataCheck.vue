@@ -12,7 +12,7 @@
       <el-table
         :data="tableData"
         :default-sort = "{prop: 'date', order: 'descending'}"
-        @expand='expand'
+        @expand-change='expand'
         :expand-row-keys='expendRow'
         :row-key="row => row.index"
         style="width: 100%">
@@ -88,9 +88,6 @@
       }
     },
     created(){
-      this.$nextTick(function () {
-        this.bodyTemChart = echarts.init(this.$ref.echarts);
-      })
       this.initData();
     },
     computed: {
@@ -158,12 +155,15 @@
       },
       // 展开行触发的操作 
       expand(row, status){
+
         if(status) {
+
           // 生成体温变化图 
-          var time;
+          var time = [];
           for(var i = 0; i < row.time.length; i++) {
             time.push(row.time[i].slice(11, 16));
           }
+
           this.generateBodyTem(row.bodyTem, time);
           this.$nextTick(() => {
             this.expendRow.push(row.index);
@@ -176,25 +176,46 @@
       // 生成体温数据变化图
       generateBodyTem(v_bodyTem, v_time) {
         // 使用echarts 以时间为横坐标 温度为纵坐标
+        var test_time = ['16:18', '16:20', '16:22', '16:24', '16:26', '16:28', '16:30', '16:32']
         var option = {
+          tooltip: {
+            trigger: 'axis'
+          },
           xAxis: {
-            type: 'time',
+            type: 'category',
             name: '游玩时间',
-            data: v_time
+            data: test_time,
+            axisPointer: {
+              type: 'shadow'
+            }
           },
           yAxis: {
             type: 'value',
-            name: '体温'
+            name: '体温',
+            axisLabel: {
+              formatter: '{value} °C'
+            }
           },
           series: [
             {
               data: v_bodyTem,
               type: 'line',
-              smooth: true
+              smooth: true,
+              tooltip: {
+                valueFormatter: value => value + ' °C'
+              },
             }
           ]
         }
-        option && this.bodyTemChart.setOption(option);
+        this.$nextTick(() => {
+          this.bodyTemChart = echarts.init(this.$refs.echarts);
+          
+          this.bodyTemChart.setOption(option);
+          this.bodyTemChart.on('mouseover', function(params) {
+
+          })
+        })
+        // option && this.bodyTemChart.setOption(option);
       },
       // 删除游客
       handleDelete(index, row) {
