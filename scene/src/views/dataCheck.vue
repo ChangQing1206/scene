@@ -21,9 +21,17 @@
           <!-- props: 是这个列绑定的数据 -->
           <template slot-scope="props">
             <!-- 体温变化图表显示区域 -->
-            <div ref="echarts" style="width: 600px; height:400px;"></div>
-            <!-- 轨迹回放 https://lbs.amap.com/demo/jsapi-v2/example/marker/replaying-historical-running-data -->
-
+            <!-- <div ref="echarts" style="width: 600px; height:400px;"></div> -->
+            <!-- 轨迹回放 https://lbs.amap.com/demo/jsapi-v2/example/marker/replaying-historical-running-data  113.087232,22.594931 -->
+            <!-- <div ref="trace" style="width: 600px; height: 400px;"></div> -->
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <div ref="echarts" style="width: 600px; height:400px;"></div>
+              </el-col>
+              <el-col :span="12">
+                <div ref="trace" style="width: 600px; height: 400px;"></div>
+              </el-col>
+            </el-row>
           </template>
         </el-table-column>
         <el-table-column
@@ -75,6 +83,9 @@
   import headTop from '../components/headTop'
   import * as echarts from 'echarts'
   import {getVistors, getVistorsCount, deleteVistor} from '@/api/api'
+  import AMapLoader from '@amap/amap-jsapi-loader'
+
+
   export default {
     data(){
       return {
@@ -85,10 +96,13 @@
         tableData: [],             // 游客数据
         currentPage: 1,            // 当前分页
         expendRow: [],
+        Amap: null,
+        map: null
       }
     },
     created(){
       this.initData();
+      this.initMap();
     },
     computed: {
 
@@ -97,6 +111,37 @@
       headTop,
     },
     methods: {
+      initMap() {
+        AMapLoader.load({
+        key:"9909d8d88b176d44601f698bcea8e29a",             // 申请好的Web端开发者Key，首次调用 load 时必填
+        version:"2.0",      // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
+        plugins:['AMap.MoveAnimation'],       // 动画插件
+      }).then((AMap)=>{
+        this.Amap = AMap; 
+      }).catch(err => err)
+      },
+     // 创建地图
+      createMap() {
+        this.map = new this.Amap.Map(this.$refs.trace,{  //设置地图容器id
+          viewMode:"2D",    //是否为3D地图模式
+          zoom:15,           //初始化地图级别
+          center:[113.087232,22.594931], //初始化地图中心点位置
+        });
+        
+      },
+      // 绘制轨迹
+      drawTrace(lineArr) {
+        var polyline = new this.Amap.Polyline({
+          map: this.map,
+          path: lineArr,
+          showDir:true,
+          strokeColor: "#28F",  //线颜色
+          // strokeOpacity: 1,     //线透明度
+          strokeWeight: 6,      //线宽
+          // strokeStyle: "solid"  //线样式
+        });
+      },
+    
       initData(){
         // 获取游客总数量
         getVistorsCount().then(res => {
@@ -168,6 +213,14 @@
           this.$nextTick(() => {
             this.expendRow.push(row.index);
           })
+
+          // 生成轨迹
+          // this.createMap();
+          this.$nextTick(() => {
+            this.createMap();
+            this.drawTrace(row.position);
+          })
+          
         }else{
           const index = this.expendRow.indexOf(row.index);
           this.expendRow.splice(index, 1)
