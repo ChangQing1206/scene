@@ -108,3 +108,15 @@ export const getTickets = data => request('get', '/api/ticket/getTickets', data)
 
 export const getTicketsCount = () => request('get', '/api/ticket/getTicketsCount')
 
+/** 
+ * 获取游客id
+ */
+
+export const getClientId = data => request('get', '/api/vistor/getClientId', data)
+
+/** 
+ * 充值
+ */
+
+export const increaseDeposit = data => request('post', '/api/deposit/increaseDeposit', data)
+

@@ -13,6 +13,7 @@ import consumeAnalysis from '@/views/consumeAnalysis.vue'
 import adminSet from '@/views/adminSet.vue'
 import explain from '@/views/explain.vue'
 import monitor from '@/views/monitor.vue'
+import deposit from '@/views/deposit.vue'
 
 Vue.use(vuerouter)
 const routes = [
@@ -64,6 +65,10 @@ const routes = [
 			path: '/explain',
 			component: explain,
 			meta: ['说明', '说明'],
+		}, {
+			path: '/deposit',
+			component: deposit,
+			meta: ['充值', '游客充值']
 		}]
   }
 ]

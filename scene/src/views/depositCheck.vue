@@ -40,14 +40,16 @@
 
 <script>
 import headTop from '@/components/headTop'
-import {getDeposits, getClientDeposits, getDepositsCount, getVistorsCount} from '@/api/api'
+import {getDeposits, getClientDeposits, getDepositsCount } from '@/api/api'
 export default {
   data() {
     return {
       tableData: [],
       limit: 20,
       offset: 0,
-      count: 0
+      count: 0,
+      currentPage: 1,
+      mode: 'normal'
     }
   },
   create() {
@@ -77,6 +79,7 @@ export default {
     getClientDeposits() {
       getClientDeposits({offset: this.offset, limit: this.limit}).then(res => {
         if(res.status == 1) {
+          this.count = res.count; // 聚合直接返回数组长度
           const data = res.data;
           this.tableData.length = 0;
           data.forEach((item, index) => {
@@ -96,33 +99,28 @@ export default {
         }
       }).catch(err => err)
     },
-    // 4.获取游客数量
-    getVistorsCount() {
-      getVistorsCount().then(res => {
-        if(res.status == 1){
-          this.count = res.count;
-        }
-        else {
-          this.$message({
-            type: 'error',
-            message: '获取数据失败'
-          })
-        }
-      }).catch(err => err)
-    },
     // 5.标签事件处理
     normalShow() {
+      this.mode = "normal";
       this.getDepositsCount();
       this.getDeposits();
     },
     // 6.标签点击事件
     vistorShow() {
-      this.getVistorsCount();
+      this.mode = "client";
+      // this.getVistorsCount();
       this.getClientDeposits();
     },
     // 7.分页处理
     handleCurrentChange(val) {
+      this.currentPage = val;
       this.offset = (val - 1) * this.limit;
+      if(this.mode == 'normal') this.getDeposits();
+      else if(this.mode == 'client') this.getClientDeposits();
+
+
+      // bug: 分页 count skip limit
+
     }
   }
 }

@@ -11,6 +11,7 @@
 						<el-menu-item index="consumeCheck">游客消费查询</el-menu-item>
 						<el-menu-item index="posAnalysis">游客位置分析</el-menu-item>
             <el-menu-item index="consumeAnalysis">游客消费分析</el-menu-item>
+						<el-menu-item index="depositCheck">充值记录查询</el-menu-item>
 					</el-submenu>
 					<el-submenu index="3" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template slot="title"><i class="el-icon-plus"></i>门票管理</template>
@@ -18,8 +19,8 @@
 						<el-menu-item index="ticketStatistics">门票统计</el-menu-item>
 					</el-submenu>
 					<el-submenu index="4" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
-						<template slot="title"><i class="el-icon-star-on"></i>图表</template>
-						<el-menu-item index="visitor">用户分布</el-menu-item>
+						<template slot="title"><i class="el-icon-star-on"></i>充值</template>
+						<el-menu-item index="deposit">游客充值</el-menu-item>
 					</el-submenu>
 					<el-submenu index="5" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template slot="title"><i class="el-icon-edit"></i>编辑</template>
