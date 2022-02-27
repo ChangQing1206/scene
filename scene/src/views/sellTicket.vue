@@ -61,6 +61,8 @@ export default {
     return {
       client: '', // 售票客户端
       vistorId: '',
+      status: '', // 门票创建响应状态
+      create_ticket_response: '', 
       ruleForm: {
         name: '',
         identity: '',
@@ -92,14 +94,21 @@ export default {
     initMqtt() {
       // 1.连接mqtt服务器
       this.client = mqtt.connect("ws://localhost:3010");
-      console.log("连接mqtt成功")
+      
       // 2.订阅获取clientId的主题 获取clientId通信
       this.client.subscribe("ticket/get_clientId");
+
       this.client.on('message', (topic, payload) => {
+        console.log("==============")
+        console.log(topic)
         switch(topic) {
           case "ticket/get_clientId":
             this.vistorId = payload.toString();
             alert("游客设备"+this.vistorId+"可以出票了");
+            break;
+          case this.create_ticket_response:
+            var response = JSON.parse(payload.toString());
+            this.status = response.status;
             break;
           default:
             console.log("主题错误");
@@ -111,23 +120,54 @@ export default {
       this.$refs[formName].validate((valid) => {
         if (valid) {
           // 验证成功 发送至 特定client
+          if(! this.vistorId) {
+            this.$message({
+              type: 'error',
+              message: '设备未开启'
+            })
+            return;
+          }
+          
           var topic = "vistor/create_ticket/" + this.vistorId;
           var content = {
             name: this.ruleForm.name,
+            clientId: this.vistorId,
             identity: this.ruleForm.identity,
             bodyTem: this.ruleForm.bodyTem,
             position: this.ruleForm.position,
             status: this.ruleForm.status
           }
-          console.log(content)
+          // 订阅门票创建响应主题
+          this.create_ticket_response = "ticket/create_ticket_response/" + this.vistorId;
+          this.client.subscribe(this.create_ticket_response); // 这里雀食成功订阅到了
           // 发送门票信息给游客设备
           this.client.publish(topic, JSON.stringify(content), (err) => {
-            if(err) alert("门票创建失败!");
-            // 写入数据库
-            this.createTicket(content);
+            if(err){
+              this.$message({
+                type: 'error',
+                message: '门票创建错误'
+              })
+              // 不合理 解决方法：timeout 
+            }
+            setTimeout(() => {
+              // 检查status
+              if(this.status) {
+                this.createTicket(content);
+                this.status = '';
+              }
+              else {
+                this.$message({
+                  type: 'error',
+                  message: '设备未开启'
+                })
+              }
+            }, 1000)
           })
         } else {
-          console.log('error submit!!');
+          this.$message({
+            type: 'error',
+            message: '门票创建失败'
+          })
           return false;
         }
       });

@@ -1,19 +1,24 @@
 <template>
   <div class="fillcontain">
     <head-top></head-top>
-    <el-row>
+    <el-row :gutter="20" class="tag">
       <!-- 默认是正常显示 -->
-      <el-tag click="normalShow">正常显示</el-tag>
-      <el-tag click="vistorShow">游客显示</el-tag>
+      <el-col :span="4"><el-button size="small" type="primary" @click="normalShow">正常显示</el-button><el-button size="small" type="primary" @click="vistorShow">游客显示</el-button></el-col>
+      
+      <el-col :span="2" :offset="18">
+        <el-tooltip class="item" effect="dark" content="refresh data" placement="top-start">
+          <el-button type="primary" icon="el-icon-refresh" @click="refresh" circle></el-button>
+        </el-tooltip>
+      </el-col>
     </el-row>
     <el-table :data="tableData" :default-sort = "{prop: 'date', order: 'descending'}">
-      <el-table-column label="游客ID" prop="clientId">
+      <el-table-column label="游客ID" prop="_id">
 
       </el-table-column>
       <el-table-column label="游客姓名" prop="name">
         
       </el-table-column>
-      <el-table-column label="充值金额" prop="consume">
+      <el-table-column label="充值金额" prop="deposit">
 
       </el-table-column>
       <el-table-column label="充值状态" prop="status">
@@ -30,7 +35,7 @@
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
         :current-page="currentPage"
-        :page-size="20"
+        :page-size="12"
         layout="total, prev, pager, next"
         :total="count">
       </el-pagination>
@@ -45,14 +50,14 @@ export default {
   data() {
     return {
       tableData: [],
-      limit: 20,
+      limit: 12,
       offset: 0,
       count: 0,
       currentPage: 1,
       mode: 'normal'
     }
   },
-  create() {
+  mounted() {
     this.getDepositsCount();
     this.getDeposits(); 
   },
@@ -121,6 +126,19 @@ export default {
 
       // bug: 分页 count skip limit
 
+    },
+    handleSizeChange() {
+
+    },
+    // 刷新数据
+    refresh() {
+      if(this.mode == "normal") {
+        this.getDepositsCount();
+        this.getDeposits();
+      }
+      else if(this.mode == "client") {
+        this.getClientDeposits();
+      }
     }
   }
 }
@@ -129,4 +147,7 @@ export default {
 
 <style lang="less" scoped>
   @import "@/assets/css/mixin";
+  .tag {
+    margin: 20px 0 10px 0;
+  }
 </style>

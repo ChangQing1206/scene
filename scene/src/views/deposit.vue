@@ -42,6 +42,7 @@ export default {
     return {
       clientId: '',
       client: '',
+      increase_deposit_response: '',
       ruleForm: {
         name: '',
         identity: '',
@@ -71,12 +72,77 @@ export default {
     initMqtt() {
       // 1.连接mqtt服务器
       this.client = mqtt.connect("ws://localhost:3010");
-      console.log("连接mqtt成功");
+      // console.log("连接mqtt成功");
+      
+      this.client.on('message', (topic, payload) => {
+        console.log(topic);
+        switch(topic) {
+          case this.increase_deposit_response:
+            var response = JSON.parse(payload.toString());
+            this.status = response.status;
+            break;
+        }
+      })
     },
     getClientId(name, identity) {
       getClientId({name: name, identity: identity}).then(res => {
         if(res.status) {
           this.clientId = res.clientId;
+          if(!this.clientId) {
+            this.$message({
+              type: 'error',
+              message: '该游客不存在或已离开景区'
+            })
+            return;
+          }
+          var topic = "vistor/increase_deposit/" + this.clientId;
+          var content = {
+            name: this.ruleForm.name,
+            identity: this.ruleForm.identity,
+            deposit: this.ruleForm.deposit
+          }
+          // 订阅充值响应主题  vistor/increase_deposit_response
+          this.increase_deposit_response = "vistor/increase_deposit_response/" + this.clientId;
+          this.client.subscribe(this.increase_deposit_response);
+          // 发送充值数据
+          this.client.publish(topic, JSON.stringify(content), (err) => {
+            // 服务器只要开着，就必然接收成功 所以这样不行
+            if(err) {
+              this.$message({
+                type: 'error',
+                message: '充值错误'
+              })
+              content.status = "充值错误";
+              this.increaseDeposit(content);
+              return;
+            }
+            // 发送后检查充值响应状态
+            setTimeout(() => {
+              // 1秒后检查充值状态是否改变
+              if(this.status) {
+                console.log("------------------------");
+                console.log(this.status);
+                content.status = "充值成功";
+                this.increaseDeposit(content);
+                this.status = '';
+                this.$message({
+                  type: 'success',
+                  message: '充值成功'
+                })
+              }else {
+                content.status = "充值失败";
+                this.increaseDeposit(content);
+                this.$message({
+                  type: 'error',
+                  message: '充值失败'
+                })
+              }
+            }, 1000)
+
+          })
+
+
+
         }
         else {
           this.$message({
@@ -88,12 +154,7 @@ export default {
     },
     increaseDeposit(d) {
       increaseDeposit(d).then(res => {
-        if(res.status) {
-          this.$message({
-            type: 'success',
-            message: '充值成功'
-          })
-        }
+        console.log(res);
       })
     },
     resetForm(formName) {
@@ -103,27 +164,9 @@ export default {
       this.$refs[formName].validate((valid) => {
         if (valid) {
           // 验证成功 发送至 特定client
-          // 获取clientId
+          // 获取clientId  游客id在创建门票时已经存储在门票表
           this.getClientId(this.ruleForm.name, this.ruleForm.identity);
-          var topic = "vistor/increase_deposit/" + this.clientId;
-          var content = {
-            name: this.ruleForm.name,
-            identity: this.ruleForm.identity,
-            deposit: this.ruleForm.deposit
-          }
-          console.log(topic);
-          this.client.publish(topic, JSON.stringify(content), (err) => {
-            if(err) {
-              this.$message({
-                type: 'success',
-                message: '充值失败'
-              })
-            }
-            else {
-              // 写入数据库
-              this.increaseDeposit(content);
-            }
-          })
+          
         } else {
           this.$message({
             type: 'error',
