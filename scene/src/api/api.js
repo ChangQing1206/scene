@@ -120,3 +120,8 @@ export const getClientId = data => request('get', '/api/vistor/getClientId', dat
 
 export const increaseDeposit = data => request('post', '/api/deposit/increaseDeposit', data)
 
+/**
+ * 验票
+ */
+
+export const checkTicket = data => request('post', '/api/ticket/checkTicket', data)
