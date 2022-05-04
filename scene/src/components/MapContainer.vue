@@ -17,8 +17,8 @@
                 width="400"
                 trigger="click">
                 <el-table :data="gridData">
-                  <el-table-column width="150" property="date" label="景点名称"></el-table-column>
-                  <el-table-column width="100" property="name" label="游客数量"></el-table-column>
+                  <el-table-column width="150" property="scene_point_name" label="景点名称"></el-table-column>
+                  <el-table-column width="100" property="number" label="游客数量"></el-table-column>
                   <!-- <el-table-column width="300" property="address" label="地址"></el-table-column> -->
                 </el-table>
                 <el-button type="success" plain slot="reference">游客数量</el-button>
@@ -260,10 +260,10 @@
         :visible.sync="dialogVisible"
         width="30%"
         :before-close="handle_private_msg_close">
-        <el-input type="text" placeholder="请输入您想向游客发送的信息"></el-input>
+        <el-input type="text" v-model="private_msg" placeholder="请输入您想向游客发送的信息"></el-input>
         <span slot="footer" class="dialog-footer">
           <el-button @click="dialogVisible = false">取 消</el-button>
-          <el-button type="primary" @click="dialogVisible = false">确 定</el-button>
+          <el-button type="primary" @click="send_private_msg">确 定</el-button>
         </span>
       </el-dialog>
 
@@ -285,7 +285,20 @@
  * 
  * 
  */
-// 添加安全密钥
+
+// 2.进入禁区提醒
+// 3.进入景区提醒
+// 4.体温报警
+// 5.私信
+// 6.统计各景点游客的数量
+// 7.提醒各景点情况
+
+// 在vue里面高德地图的icon的image 使用本地图片的问题
+import health_icon from '@/assets/img/health.png'
+import danger_icon from '@/assets/img/danger.png'
+import warn_icon from '@/assets/img/warn.png'
+
+// 添加安全密钥  (坑)
 window._AMapSecurityConfig = {
   securityJsCode: "e0bf195629b935158df189360420b288"
 }
@@ -304,7 +317,7 @@ import * as mqtt from "mqtt";
 // 2.更新labelmaker 无影响
 // 这是游客对象
 var vistors = new Map();
-vistors.set("000000001", {name: "黄晰维", identity: "19875915834", position: [113.085721,22.594624]})
+vistors.set("000000002", {clientId: "000000002", name: "黄晰维", identity: "19875915834", bodyTem: 27, position: [113.085721,22.594624]})
 var amap = null;
 var map = null;
 var layer = null;
@@ -332,6 +345,7 @@ export default {
       scene_point: [],
       start_pos: '',
       end_pos: '',
+      private_msg: '',   // 发送给游客的私人消息
      // search_result: {name: "", identity: "", position: ""},
       search_result: [{name: "none", identity: "none", position: "none"}],
       drawer: false,
@@ -341,11 +355,11 @@ export default {
       dialogVisible: false,
       help_addr: [113.08606,22.600485], // 救援室的位置
       drawer1: false,
-      warn_msg_unread: [{time: "11:34:29", name: "黄晰维", identity: "19875915834", content: "进入了危险地区"}], // 未读预警消息
+      warn_msg_unread: [], // 未读预警消息
       warn_msg_readed: [],  // 已读预警消息
-      help_msg_unread: [{time: "11:34:29", name: "黄晰维", identity: "19875915834", content: "掉水了"}], // 未读求助消息
+      help_msg_unread: [], // 未读求助消息
       help_msg_readed: [], // 已读求助消息
-      gridData: []    // [{景点名称: 游客数量}, {景点名称: 游客数量}]
+      gridData: []    // [{name: '', num: 1}]
       // AMap: null,   // AMap 类
       // map: null,    // 地图对象
       // labelsLayer: null,  // LabelsLayer 图层对象
@@ -488,10 +502,11 @@ export default {
         // 图标类型，现阶段只支持 image 类型
         type: 'image',
         // 图片 url
-        image: '../assets/img/health.png',
+        image: health_icon,  // require("../assets/img")
         size: [32, 32],
         anchor: 'bottom-center',
       }
+      console.log(icon);
       // 设置文本对象
       var text = {
         // 要展示的文字内容
@@ -518,7 +533,7 @@ export default {
       var marker = new amap.LabelMarker({
         name: p.identity, // 此属性非绘制文字内容，仅最为标识使用  用于更改颜色
         position: p.position,
-        zIndex: 1000,
+        zIndex: 13,
         // 将第一步创建的 icon 对象传给 icon 属性
         icon: icon,
         // 将第二步创建的 text 对象传给 text 属性
@@ -528,14 +543,14 @@ export default {
       console.log("游客marker")
 
       layer.add(marker);
-      setInterval(this.update_vistors_model,30000);
+      setInterval(this.update_vistors_model,3000);
     },
     updateVistor(p) {
       p = JSON.parse(p.toString());
       // 根据游客身份证获取对象
       var person = vistors.get(p.clientId);
       if(!person) return;
-      // 体温更新 位置更新
+      // 体温更新 位置更新  lat lon
       var mark = GPS.gcj_encrypt(
       Number(p.position[1]),
       Number(p.position[0]))
@@ -545,9 +560,19 @@ export default {
       if(p.bodyTem > 31) {
         // 通报异常
         //console.log("异常tongbao");
-        this.say("你的体温异常");
+        this.say("游客" + p.name + "的体温异常, 请做好防疫措施");
         // 更改颜色
+        var allmarkers = layer.getAllOverlays('marker');  // getPosition()  getIcon().image   getName()  // 获取identity
 
+        for(var i = 0; i < allmarkers.length; i++) {
+          if(allmarkers[i].getName() == p.identity) {
+            allmarkers[i].getIcon().image = warn_icon; // 替换图标
+            layer.add(allmarkers[i])
+            break;
+          }
+        }
+        // 通知游客
+        this.client.publish("vistor/bodyTem_exception/" + this.clientId, JSON.stringify({message: "body temperature exception"}), function() {})
       }
 
     },
@@ -559,6 +584,7 @@ export default {
     },
     // 监控平台6分钟更新一次
     update_vistors_model() {
+      this.gridData.length = 0; // 数组清零
       var num = 0;
       console.log("监控平台开始更新");
       // 1.先清空地图的游客标记
@@ -567,18 +593,18 @@ export default {
       // 2.根据vistors游客对象重新创建marker
       var icon = {
         type: 'image',
-        image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
-        size: [6, 9],
+        image: health_icon,
+        size: [32, 32],
         anchor: 'bottom-center',
       }
       // 设置文本对象
       var text = {
         content: '',
-        direction: 'right',
-        offset: [-20, -5],
+        direction: 'top',
+        offset: [0, 0],
         style: {
           fontSize: 12,
-          fillColor: '#22886f',
+          fillColor: '#000000',
           strokeColor: '#fff',
           strokeWidth: 2,
         }
@@ -591,11 +617,12 @@ export default {
         var marker = new amap.LabelMarker({
           name: value.identity, // 此属性非绘制文字内容，仅最为标识使用
           position: value.position,
-          zIndex: 16,
+          zIndex: 13,
           icon: icon,
           text: text,
         })
         markers.push(marker);
+
       }
       // 一次性将游客marker添加到labelsLayer图层
       layer.add(markers);
@@ -609,26 +636,30 @@ export default {
           if(overlays[i].getOptions().extData.info == "危险地区" && overlays[i].contains([vistor.position[0], vistor.position[1]])) {
             // 通知游客
             // 1.制作游客的topic
-            var topic_danger = "mqtt/danger_tip/" + clientId;
+            var topic_danger = "vistor/enter_dangerArea/" + clientId;
             // 2.警报信息
-            var danger_tip = "你已经进入了危险地区, 请离开";
+            var danger_tip = "游客" + vistor.name + "已经进入了危险地区";
             this.say(danger_tip);
             // 3.发送给对应的游客
-            this.client.publish(topic_danger, danger_tip, function(err) {
+            this.client.publish(topic_danger, "enter danger area", function(err) {
               console.log(err);
             })
+            // 4.添加到预警数组  {time: "11:34:29", name: "黄晰维", identity: "19875915834", content: "掉水了"}
+            var time = new Date();
+            
+            this.warn_msg_unread.push({time: time.toString().slice(16, 24), name: vistor.name, identity: vistor.identity, content: "进入了危险地区"});
           }
           else if(overlays[i].getOptions().extData.info != "危险地区" && overlays[i].contains([vistor.position[0], vistor.position[1]])) {
             // 1.制作游客的topic
-            var topic_scene = "mqtt/scene_tip/" + clientId;
+            var topic_scene = "vistor/enter_scenePoint/" + clientId;
             var scenePoint = overlays[i].getOptions().extData.info;
             // 2.警报信息
-            var scene_tip = "你已经进入" + scenePoint + "景点";
+            //var scene_tip = "你已经进入" + scenePoint + "景点";
             // 需要统计各个景点的游客数量
             num = num + 1; // 游客数量+1
-            this.say(scene_tip);
+            //this.say(scene_tip);
             // 3.发送给对应的游客
-            this.client.publish(topic_scene, scene_tip, function(err) {
+            this.client.publish(topic_scene, JSON.stringify({addr: scenePoint}), function(err) {
               console.log(err);
             })
             // 4.将去过的景点上传数据库  游客ID 以及 景点
@@ -637,9 +668,9 @@ export default {
 
         }
         // 统计各景点的游客数量
-          if(overlays[i].getOptions().extData.info != "危险地区" ) {
-            this.gridData.push({scenePoint: num})
-          }
+        if(overlays[i].getOptions().extData.info != "危险地区" ) {
+          this.gridData.push({scene_point_name: scenePoint, number: num})
+        }
       }
     },
     updateScene(id, scene) {
@@ -696,7 +727,7 @@ export default {
     //    this.scene_point.push(value);
         var opt_scene = {
           fillColor: '#67C23A',
-          info: value
+          extData: {info: value}
         }
         this.draw(opt_scene);
       }).catch(() => {
@@ -747,6 +778,7 @@ export default {
       mousetool.polygon(opt);
     },
     draw_cb(e) {
+      console.log(e.obj)
       overlays.push(e.obj);
       this.$message({
         type: 'success',
@@ -852,7 +884,7 @@ export default {
     set_fit_view() {
       map.setFitView(null, false, [150, 60, 100, 60]);
       var newCenter = map.getCenter();
-      this.center_pos = "当前中心坐标是" + newCenter.toString();
+      this.center_pos = newCenter.toString();
     },
     // 查看预警未读消息
     recv_msg(tab, event) {
@@ -1020,7 +1052,11 @@ export default {
 
     // 发送私人消息
     send_private_msg() {
-      
+      this.dialogVisible = false;
+      // 发送私人消息
+      this.client.publish("vistor/message_private/"+this.clientId, JSON.stringify({message: this.private_msg}), function() {
+
+      })
     },
     handle_private_msg_close(done) {
       this.$confirm('确认关闭？')
