@@ -56,8 +56,10 @@
           </el-tooltip>
         </el-col>
         <el-col :span="3" >
-          <el-dropdown split-button type="primary" @command="handleClick">
-            功能菜单
+          <el-dropdown trigger="click"  type="primary" :disabled="state" @command="handleClick" >
+            <el-button type="primary" @click="isAdmin">
+              功能菜单<i class="el-icon-arrow-down el-icon--right"></i>
+            </el-button>
             <el-dropdown-menu slot="dropdown">
               <el-dropdown-item command="1">禁区围栏</el-dropdown-item>
               <el-dropdown-item command="2">景点围栏</el-dropdown-item>
@@ -249,7 +251,7 @@
           <el-descriptions-item label="位置" label-class-name="my-label" >{{item.position}}</el-descriptions-item>
           <el-descriptions-item label="操作" label-class-name="my-label" contentStyle="display:flex; justify-content: center; align-item: center;">
             <!-- <el-tag size="small">学校</el-tag> -->
-            <el-button type="danger" @click="dialogVisible=true" size="small">私信</el-button>
+            <el-button type="danger" @click="sixin" size="small">私信</el-button>
             <el-button type="primary" @click="reset_search" size="small">RESET</el-button>
           </el-descriptions-item>
         </el-descriptions>
@@ -317,7 +319,7 @@ import * as mqtt from "mqtt";
 // 2.更新labelmaker 无影响
 // 这是游客对象
 var vistors = new Map();
-vistors.set("000000002", {clientId: "000000002", name: "黄晰维", identity: "19875915834", bodyTem: 27, position: [113.085721,22.594624]})
+vistors.set("000000002", {clientId: "000000002", name: "黄晰维", identity: "19875915834", bodyTem: 27, position: [113.085721,22.594624], visited_point: []})
 var amap = null;
 var map = null;
 var layer = null;
@@ -351,6 +353,7 @@ export default {
       drawer: false,
       walking: '',   // 路径规划对象
       direction: "rtl",
+      clientId: '',
       activeName: 'first',
       dialogVisible: false,
       help_addr: [113.08606,22.600485], // 救援室的位置
@@ -359,6 +362,7 @@ export default {
       warn_msg_readed: [],  // 已读预警消息
       help_msg_unread: [], // 未读求助消息
       help_msg_readed: [], // 已读求助消息
+      state: false,
       gridData: []    // [{name: '', num: 1}]
       // AMap: null,   // AMap 类
       // map: null,    // 地图对象
@@ -418,8 +422,8 @@ export default {
     createMap() {
       map = new amap.Map("map_container",{  //设置地图容器id
         viewMode:"2D",    //是否为3D地图模式
-        zoom:11,           //初始化地图级别
-        center:[113.69842,22.37622], //初始化地图中心点位置
+        zoom:16,           //初始化地图级别
+        center:[113.085721,22.594624], //初始化地图中心点位置
       });
     },
     // 初始化labellayers 
@@ -471,12 +475,14 @@ export default {
       });
     },
     createVistor(v) {
+      this.vistor_quatity ++;
       // 更改写法 使用 JSON.stringify():对象转字符串 JSON.parse()字符串解析为对象
       console.log(v.toString())
       v = JSON.parse(v.toString());
       console.log("创建游客模型")
       console.log(v);
       var clientId = v.clientId;  // 客户端id必须要的
+      this.clientId = v.clientId;  // 保存id
       var identity = v.identity; // 身份证
       var name = v.name; // 姓名
       var bodyTem = v.bodyTem; // 体温
@@ -486,10 +492,10 @@ export default {
           Number(position[0]))
       console.log(mark)
       // 时间不需要在这里存储
-      var person = new vistor(identity, name, bodyTem, [mark.lon, mark.lat]);
+      var person = new vistor(identity, name, bodyTem, [mark.lon, mark.lat], new Array());
       // 键：clientId 值：游客对象
       // 调用游客对象的创建游客标记方法，在地图上创建标记  不合理
-      // 新建的游客对象添加进游客map
+      // 新建的游客对象添加进游客map visited_point
       vistors.set(clientId, person);
       // 更新游客标记
       this.creat_vistor_model(person);
@@ -546,6 +552,7 @@ export default {
       setInterval(this.update_vistors_model,3000);
     },
     updateVistor(p) {
+     // this.vistor_quatity = vistors.length
       p = JSON.parse(p.toString());
       // 根据游客身份证获取对象
       var person = vistors.get(p.clientId);
@@ -563,7 +570,8 @@ export default {
         this.say("游客" + p.name + "的体温异常, 请做好防疫措施");
         // 更改颜色
         var allmarkers = layer.getAllOverlays('marker');  // getPosition()  getIcon().image   getName()  // 获取identity
-
+        // 通知游客  vistor/bodyTem_exception/000000001
+        this.client.publish("vistor/bodyTem_exception/" + p.clientId, JSON.stringify({message: "body temperature exception"}), function() {})
         for(var i = 0; i < allmarkers.length; i++) {
           if(allmarkers[i].getName() == p.identity) {
             allmarkers[i].getIcon().image = warn_icon; // 替换图标
@@ -571,8 +579,7 @@ export default {
             break;
           }
         }
-        // 通知游客
-        this.client.publish("vistor/bodyTem_exception/" + this.clientId, JSON.stringify({message: "body temperature exception"}), function() {})
+
       }
 
     },
@@ -585,7 +592,7 @@ export default {
     // 监控平台6分钟更新一次
     update_vistors_model() {
       this.gridData.length = 0; // 数组清零
-      var num = 0;
+      
       console.log("监控平台开始更新");
       // 1.先清空地图的游客标记
       // 移除labelLayers图层上的所有marker
@@ -632,6 +639,7 @@ export default {
       // 外层：电子围栏区域
       for(var i = 0; i < overlays.length; i++) {
         // 内层：游客
+        var num = 0;
         for(var [clientId, vistor] of vistors) {
           if(overlays[i].getOptions().extData.info == "危险地区" && overlays[i].contains([vistor.position[0], vistor.position[1]])) {
             // 通知游客
@@ -658,12 +666,20 @@ export default {
             // 需要统计各个景点的游客数量
             num = num + 1; // 游客数量+1
             //this.say(scene_tip);
-            // 3.发送给对应的游客
-            this.client.publish(topic_scene, JSON.stringify({addr: scenePoint}), function(err) {
-              console.log(err);
-            })
-            // 4.将去过的景点上传数据库  游客ID 以及 景点
-            this.updateScene(clientId, vistor.name, scenePoint);
+            console.log("=============================")
+            console.log(vistor.visited_point)
+            if(!vistor.visited_point.includes(scenePoint)) {
+              // 第一次进入景点提醒
+              this.client.publish(topic_scene, JSON.stringify({addr: scenePoint}), function(err) {
+                console.log(err);
+              })
+              // 记录游客去过的景点
+              vistor.visited_point.push(scenePoint)
+              this.updateScene(clientId, vistor.name, scenePoint);
+            }
+            else {
+              //
+            }
           }
 
         }
@@ -684,6 +700,7 @@ export default {
     },
     // 销毁游客实例，1.从vistors map对象删除  2.从vistors_model数组移除  3.从labelLayer移除
     destroyVistor(p) {
+      this.vistor_quatity --;
       // 1.从vistors map对象删除
       vistors.delete(p.clientId);
       // 2.从vistors_model数组移除
@@ -813,34 +830,7 @@ export default {
         type: "success",
         message: '请双击地图选择路径规划起点和终点'
       })
-      // var that = this;
-//       map.on('dblclick', function cb(e) {
-//           // document.getElementById("lnglat").value = e.lnglat.getLng() + ',' + e.lnglat.getLat()
-//         if(this.start_pos === '') {
-//           this.start_pos = [e.lnglat.getLng(), e.lnglat.getLat()]
-//           that.$message({
-//             type: "success", 
-//             message: '起点坐标为 ' + this.start_pos
-//           })
-//         }else {
-//           this.end_pos = [e.lnglat.getLng(), e.lnglat.getLat()]
-//           that.$message({
-//             type: "success", 
-//             message: '终点坐标为 ' + this.end_pos + ' 开始生成路径'
-//           })
 
-//           //根据起终点坐标规划步行路线
-//           that.walking.search(this.start_pos, this.end_pos, function(status, result) {
-//             //console.log(result)
-//               // result即是对应的步行路线数据信息，相关数据结构文档请参考  https://lbs.amap.com/api/javascript-api/reference/route-search#m_WalkingResult
-//               if (status === 'complete') {
-//                 //console.log(status)
-//               } else {
-// //
-//               } 
-//           });
-//         }
-//       });
       map.on('click', this.cb);
 
     },
@@ -1020,6 +1010,13 @@ export default {
     },
     // 按游客姓名或者按手机号搜索
     search_pos() {
+      if(localStorage.getItem("role") !== "管理员") {
+        this.$message({
+          type:'error',
+          message: '你的权限不足'
+        })
+        return
+      }
       this.search_result.length = 0;
       // 按姓名搜索
       if(this.select === '1') {
@@ -1054,7 +1051,7 @@ export default {
     send_private_msg() {
       this.dialogVisible = false;
       // 发送私人消息
-      this.client.publish("vistor/message_private/"+this.clientId, JSON.stringify({message: this.private_msg}), function() {
+      this.client.publish("vistor/message_private/"+ this.clientId, JSON.stringify({message: this.private_msg}), function() {
 
       })
     },
@@ -1069,6 +1066,25 @@ export default {
 
     reset_search() {
       this.search_result = [{name: "none", identity: "none", position: "none"}]
+    },
+    isAdmin() {
+      if(localStorage.getItem("role") !== "管理员") {
+        this.$message({
+          type: "error",
+          message: "你的权限不足"
+        })
+        this.state = true
+      }
+    },
+    sixin() {
+      if(localStorage.getItem("role") != "管理员") {
+        this.$message({
+          type: "error",
+          message: "你的权限不足"
+        })
+      }else {
+        this.dialogVisible=true
+      }
     }
 
 

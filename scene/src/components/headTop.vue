@@ -6,8 +6,12 @@
 		</el-breadcrumb>
 		<el-dropdown @command="handleCommand" menu-align='start'>
 			<!-- <img :src="baseImgPath + adminInfo.avatar" class="avator"> -->
-      <div class="username">{{this.adminInfo.username}}</div>
+      
+			<img class="username" src="https://edu-avatar0.oss-cn-guangzhou.aliyuncs.com/2022/03/03/27687dc5875c45c29c1e40e7edb752a5file.png" alt="">
+	
 			<el-dropdown-menu slot="dropdown">
+				<el-dropdown-item>用户名: {{this.adminInfo.user}}</el-dropdown-item>
+				<el-dropdown-item>当前角色: {{this.adminInfo.role}}</el-dropdown-item>
 				<el-dropdown-item command="home">首页</el-dropdown-item>
 				<el-dropdown-item command="signout">退出</el-dropdown-item>
 			</el-dropdown-menu>
@@ -21,9 +25,10 @@
 
   export default {
     created(){
-      if (!this.adminInfo._id) {
-        this.getAdminData();
-      }
+      // if (!this.adminInfo.user) {
+      //   this.getAdminData();
+      // }
+			this.getAdminData();
     },
     computed: {
       ...mapState(['adminInfo']),
@@ -40,7 +45,7 @@
               type: 'success',
               message: '退出成功'
             });
-            this.$router.push('/');
+            this.$router.push('login');
 					}else{
 						this.$message({
               type: 'error',
@@ -70,9 +75,10 @@
     .wh(60px, 60px);
 		border-radius: 50%;
 		margin-right: 37px;
-    background-color: #409EFF;
+    // background-color: #409EFF;
     text-align: center;
     line-height: 60px;
     color: bisque;
   }
+
 </style>

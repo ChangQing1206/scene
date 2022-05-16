@@ -199,14 +199,15 @@
         this.getVistors();
       },
       // 展开行触发的操作 
-      expand(row, status){
-
-        if(status) {
+      expand(row, expendedRows){
+        // 参数2是展开的行的内容
+        if(this.expendRow.indexOf(row.index) === -1) {
 
           // 生成体温变化图 
           var time = [];
+          console.log(row)
           for(var i = 0; i < row.time.length; i++) {
-            time.push(row.time[i].slice(11, 16));
+            time.push(row.time[i].slice(11, 19));
           }
 
           this.generateBodyTem(row.bodyTem, time);
@@ -217,27 +218,37 @@
           // 生成轨迹
           // this.createMap();
           this.$nextTick(() => {
-            this.createMap();
-            this.drawTrace(row.position);
+            if(this.map == null) {
+              this.createMap();
+              this.drawTrace(row.position);
+            }
+
           })
           
         }else{
           const index = this.expendRow.indexOf(row.index);
           this.expendRow.splice(index, 1)
+          this.map = null;
+          this.bodyTemChart = null;
         }
       },
       // 生成体温数据变化图
       generateBodyTem(v_bodyTem, v_time) {
-        // 使用echarts 以时间为横坐标 温度为纵坐标
-        var test_time = ['16:18', '16:20', '16:22', '16:24', '16:26', '16:28', '16:30', '16:32']
+        // 使用echarts 以时间为横坐标 温度为纵坐标  15秒更新一次
+        //var test_time = ['16:18', '16:20', '16:22', '16:24', '16:26', '16:28', '16:30', '16:32']
         var option = {
+          title: {
+            text: '体温变化',
+            subtext: '日期',
+            left: 'center'
+          },
           tooltip: {
             trigger: 'axis'
           },
           xAxis: {
             type: 'category',
             name: '游玩时间',
-            data: test_time,
+            data: v_time,
             axisPointer: {
               type: 'shadow'
             }
@@ -261,12 +272,14 @@
           ]
         }
         this.$nextTick(() => {
-          this.bodyTemChart = echarts.init(this.$refs.echarts);
+          if(this.bodyTemChart == null) {
+            this.bodyTemChart = echarts.init(this.$refs.echarts);
           
-          this.bodyTemChart.setOption(option);
-          this.bodyTemChart.on('mouseover', function(params) {
+            this.bodyTemChart.setOption(option);
+            this.bodyTemChart.on('mouseover', function(params) {
 
-          })
+            })
+          }
         })
         // option && this.bodyTemChart.setOption(option);
       },

@@ -7,6 +7,8 @@ Vue.use(Vuex)
 const state = {
 	adminInfo: {
 		// avatar: 'default.jpg'
+		user: '',
+		role: ''
 	},
 	// 景区电子围栏 在平台数据更新时,同时更新数据库
 	// sceneFence: []
@@ -24,7 +26,7 @@ const actions = {
 			const res = await getAdminInfo();
 			console.log("getAdminInfo:", res);
 			if (res.status == 1) {
-				commit('saveAdminInfo', res.data);
+				commit('saveAdminInfo', res.message);
 			}else{
 				throw new Error(res.type)
 			}

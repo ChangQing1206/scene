@@ -14,12 +14,6 @@
         <el-form-item label="充值金额" prop="amount">
           <el-input v-model="ruleForm.bodyTem"></el-input>
         </el-form-item>
-        <!-- <el-form-item label="游客经度" prop="positionLong">
-          <el-input v-model="ruleForm.position[0]"></el-input>
-        </el-form-item>
-        <el-form-item label="游客纬度" prop="positionLati">
-          <el-input v-model="ruleForm.position[1]"></el-input>
-        </el-form-item> -->
         <el-form-item label="门票状态" prop="status">
           <el-select v-model="ruleForm.status" placeholder="选择门票状态">
             <el-option label="未使用" value="unuse"></el-option>
@@ -41,6 +35,7 @@
 import * as mqtt from "mqtt";
 import { createTicket, checkTicket } from '@/api/api';
 import headTop from '@/components/headTop'
+// import { formateDate } from '@utils/formatDate'
 export default {
   mounted() {
     // 初始化mqtt客户端
@@ -55,21 +50,13 @@ export default {
       if(regx.test(value)) callback();
       else callback(new Error("手机号格式错误!"));
     }
-    // var validateNumber = (rule, value, callback) => {
-    //   if( typeof Number(value) == 'number') callback();
-    //   else callback(new Error("体温必须为数字"));
-    // }
     return {
       client: '', // 售票客户端
       vistorId: '',
-      status: 0, // 门票创建响应状态
-      create_ticket_response: '', 
       ready: 0,
       ruleForm: {
         name: '',
         identity: '',
-        // bodyTem: '',
-        // position: [113.086051,22.600441],
         status: '',
         amount: '',
       },
@@ -83,10 +70,6 @@ export default {
           { required: true, message: '请输入手机号', trigger: 'blur'},
           { validator: validateId, trigger: 'blur'}
         ],
-        // bodyTem: [
-        //   { required: true, message: '请输入游客体温', trigger: 'blur'},
-        //   { validator: validateNumber, message: '体温必须为数字'}
-        // ]
       }
     }
   },
@@ -100,33 +83,53 @@ export default {
       
       // 2.订阅获取clientId的主题 获取clientId通信  用于游客设备通信
       this.client.subscribe("ticket/get_clientId");  // 用于游客设备通信
-      this.client.subscribe("ticket/ready");   // 用于出票设备出票
-      this.client.subscribe("ticket/check");   // 用于门票验证  上传至服务器
+      this.client.subscribe("ticket/ready");         // 出票提醒
+      this.client.subscribe("ticket/check");         // 用于门票验证  上传至服务器
+      this.client.subscribe("ticket/response");      // 出票成功响应
       this.client.on('message', (topic, payload) => {
-        console.log("==============")
         console.log(topic)
         switch(topic) {
           case "ticket/ready": 
-//            alert("游客设备"+this.vistorId+"可以出票了");
-            this.ready = 1;   // 已准备
+            if(JSON.parse(payload.toString()).state == 2)
+              this.ready = 1;   // 已准备
             break;
           case "ticket/get_clientId":
             this.vistorId = payload.toString();  // 取到游客设备id
             alert("设备" + this.vistorId + "启动")
             break;
-          case this.create_ticket_response:
-//            var response = JSON.parse(payload.toString());
-            this.status = 1;
+          case "ticket/response":
+            if(JSON.parse(payload.toString()).state === 1)
+            {
+              var content = {
+                client_id: this.vistorId, 
+                name: this.ruleForm.name, 
+                identity: this.ruleForm.identity, 
+                // create_time:  formateDate(),  后端生成时间
+                status: this.ruleForm.status,
+                deposit: this.ruleForm.amount
+              }
+              this.createTicket(content);
+
+            }else {
+              this.$message({
+                type: "error",
+                message: "硬件出票错误"
+              })
+            }
             break;
           case "ticket/check":
             var check = JSON.parse(payload.toString())
-            if(check.status == "using") {
-              alert(check.name + "出票成功")
+            if(check.state == 1) {
+              this.checkTicket({name: check.name, identity: check.identity, status: check.status});
+            }else {
+              this.$message({
+                type: "error",
+                message: "硬件验票失败"
+              })
             }
-//            this.checkTicket(check);
             break;
           default:
-            console.log("主题错误");
+            console.log("topic错误");
             break;
         }
       })
@@ -134,61 +137,29 @@ export default {
     submitForm(formName) {
       this.$refs[formName].validate((valid) => {
         if (valid) {
-          // 验证成功 发送至 特定client
-          // 暂时注释掉  先完成游客设备的调试
-          // if(! this.ready) {
-          //   this.$message({
-          //     type: 'error',
-          //     message: '出票设备未准备好'
-          //   })
-          //   return;
-          // }
-          
-//          var topic = "vistor/create_ticket/" + this.vistorId;
-          var topic = "vistor/create_ticket";
-          var content = {
-            name: this.ruleForm.name,
-//            clientId: this.vistorId,
-            identity: this.ruleForm.identity,
-//            bodyTem: this.ruleForm.bodyTem,
-//            position: this.ruleForm.position,
-            status: this.ruleForm.status,
-            amount: this.ruleForm.amount
+          if(! this.ready) {
+            this.$message({
+              type: 'error',
+              message: '出票设备未准备好'
+            })
+            return;
           }
-          // 订阅门票创建响应主题
-//          this.create_ticket_response = "ticket/create_ticket_response/" + this.vistorId;
-          this.create_ticket_response = "ticket/response"
-          this.client.subscribe(this.create_ticket_response); // 这里雀食成功订阅到了
           // 发送游客信息给游客设备  便于后面上传
           this.client.publish("vistor/get_Message/" + this.vistorId, JSON.stringify({name: this.ruleForm.name, identity: this.ruleForm.identity}), function() {
 
           })
-          // this.client.publish(topic, JSON.stringify(content), (err) => {
-          //   if(err){
-          //     this.$message({
-          //       type: 'error',
-          //       message: '门票创建错误'
-          //     })
-          //     // 不合理 解决方法：timeout 
-          //   }
-          //   setTimeout(() => {
-          //     // 检查status
-          //     if(this.status) {
-          //       this.createTicket(content);
-          //       this.status = 0;
-          //     }
-          //     else {
-          //       this.$message({
-          //         type: 'error',
-          //         message: '出票失败'
-          //       })
-          //     }
-          //   }, 2000)
-          // })
+          // 出票信息下发
+          var content = {
+            name: this.ruleForm.name, 
+            identity: this.ruleForm.identity, 
+            status: this.ruleForm.status,
+            deposit: this.ruleForm.amount
+          }
+          this.client.publish("vistor/create_ticket", JSON.stringify(content), function(err) {console.log(err)})
         } else {
           this.$message({
             type: 'error',
-            message: '门票创建失败'
+            message: '输入错误'
           })
           return false;
         }
@@ -207,7 +178,7 @@ export default {
         }else {
           this.$message({
             type: 'error',
-            message: '门票创建失败'
+            message: '软件出票失败'
           })
         }
       }).catch( err => {
@@ -220,7 +191,15 @@ export default {
     checkTicket(check) {
       checkTicket(check).then(res => {
         if(res.status) {
-          //
+          this.$message({
+            type: "success",
+            message: '验票成功'
+          })
+        }else {
+          this.$message({
+            type: "error",
+            message: '软件验票失败'
+          })
         }
       })
     }

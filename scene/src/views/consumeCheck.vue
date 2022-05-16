@@ -13,11 +13,12 @@
       <el-tag click="vistorShow">游客显示</el-tag>
     </el-row>
     <el-table :data="tableData" :default-sort = "{prop: 'date', order: 'descending'}">
-      <el-table-column label="游客ID" prop="clientId">
 
-      </el-table-column>
       <el-table-column label="游客姓名" prop="name">
         
+      </el-table-column>
+      <el-table-column label="游客手机号" prop="identity">
+
       </el-table-column>
       <el-table-column label="商品名称" prop="goodsName">
 
@@ -78,7 +79,10 @@ export default {
           })
         }
         else {
-          console.log("请求数据失败");
+          this.$message({
+            type: "error",
+            message: "请求数据失败"
+          })
         }
       }).catch(err => err)
     },
@@ -93,7 +97,10 @@ export default {
           })
         }
         else {
-          console.log("请求数据失败");
+          this.$message({
+            type: "error",
+            message: "请求数据失败"
+          })
         }
       }).catch(err => err)
     },

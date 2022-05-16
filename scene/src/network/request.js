@@ -1,6 +1,7 @@
 import axios from 'axios';
 import qs from 'qs'
 axios.defaults.withCredentials=true;
+
 // axios 配置
 var instance = axios.create({
   // content-type 决定浏览器将以什么形式、什么编码读取这个文件
@@ -44,7 +45,15 @@ instance.interceptors.request.use(config => {
     // 记录的方式是根据url生成一个cancelToken 
     // 而在第二次请求时，这个记录由于已经在pending了，所以直接取消它
     console.log("这是拦截请求");
-    console.log(config);
+    
+    console.log("", config);
+    console.log(config.url)
+    if(config.url !== "/api/admin/register") {
+        var user_token = localStorage.getItem("user_token")
+        if(user_token) {
+            config.headers.Authorization = `Bearer ${user_token}`
+        }
+    }
     removeRepeatUrl(config);       //在一个ajax发送前执行一下取消操作
     saveRepeatUrl(config);         //保存请求地址
     return config
@@ -117,6 +126,7 @@ export default instance;
  */
 export function request(methed,url, data = {},headers) {
     return new Promise((resolve, reject) => {
+        
         instance({
             method: methed || 'post', // 如果不传methed，默认是post
             url:url,

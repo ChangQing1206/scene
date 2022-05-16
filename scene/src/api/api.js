@@ -7,6 +7,12 @@ import {request} from '@/network/request.js'
 export const login = data => request('post', '/api/admin/login', data);
 
 /**
+ * 注册
+ */
+
+export const register = data => request('post', '/api/admin/register', data);
+
+/**
   * 退出
   */
 
@@ -125,3 +131,10 @@ export const increaseDeposit = data => request('post', '/api/deposit/increaseDep
  */
 
 export const checkTicket = data => request('post', '/api/ticket/checkTicket', data)
+
+/**
+ * 消费
+ */
+
+export const createOrder = data => request('post', '/api/consume/createOrder', data)
+
