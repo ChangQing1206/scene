@@ -26,14 +26,15 @@
 					<el-submenu v-show="powerArr[10]" index="5" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template slot="title"><i class="el-icon-shopping-cart-full"></i>消费</template>
 						<el-menu-item v-show="powerArr[10]" index="consume">游客消费</el-menu-item>
+						<el-menu-item v-show="powerArr[11]" index="addGoods">添加商品</el-menu-item>
 					</el-submenu>
-					<el-submenu v-show="powerArr[11]"  index="6" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
+					<el-submenu v-show="powerArr[12]"  index="6" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template slot="title"><i class="el-icon-setting"></i>设置</template>
-						<el-menu-item v-show="powerArr[11]" index="adminSet">管理员设置</el-menu-item>
+						<el-menu-item v-show="powerArr[12]" index="adminSet">管理员设置</el-menu-item>
 					</el-submenu>
-					<el-submenu v-show="powerArr[12]" index="7" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
+					<el-submenu v-show="powerArr[13]" index="7" style="overflow-x:hidden;/*解决子菜单宽度超出父级元素宽度*/">
 						<template  slot="title"><i class="el-icon-warning"></i>说明</template>
-						<el-menu-item v-show="powerArr[12]" index="explain">说明</el-menu-item>
+						<el-menu-item v-show="powerArr[13]" index="explain">说明</el-menu-item>
 					</el-submenu>
 				</el-menu>
 			</el-col>

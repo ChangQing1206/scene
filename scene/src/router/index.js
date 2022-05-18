@@ -15,6 +15,7 @@ import explain from '@/views/explain.vue'
 import monitor from '@/views/monitor.vue'
 import deposit from '@/views/deposit.vue'
 import consume from '@/views/consume.vue'
+import addGoods from '@/views/addGoods.vue'
 Vue.use(vuerouter)
 
 const routes = [
@@ -78,6 +79,12 @@ const routes = [
 			path: '/consume',
 			component: consume,
 			meta: ['消费', '游客消费'],
+			role: ["商家", "管理员"]
+		},
+		{
+			path: '/addGoods',
+			component: addGoods,
+			meta: ['消费', '添加商品'],
 			role: ["商家", "管理员"]
 		},
 		{

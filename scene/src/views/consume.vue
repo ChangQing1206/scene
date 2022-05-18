@@ -21,10 +21,7 @@
 
           <div class="search">
             <el-select v-model="select" @change="first_se" class="goodsType" slot="prepend" placeholder="商品类目">
-              <el-option label="饮料" value="1"></el-option>
-              <el-option label="零食" value="2"></el-option>
-              <el-option label="热食" value="3"></el-option>
-              <el-option label="特殊服务" value="4"></el-option>
+              <el-option v-for="(item, index) in this.goodsData" :key="index" :label="item._id" :value="item.goods"></el-option>
             </el-select>
 
           <el-select v-model="value" style="width: 200px;" filterable>
@@ -53,7 +50,7 @@
           <el-card class="box-card" v-if="consumeGoods.length > 0">
             <div slot="header" class="clearfix">
               <span>购物车</span>
-              <el-button style="float: right; padding: 3px 0" @click="submitForm" type="text">立即扣费</el-button>
+              <el-button style="float: right; padding: 3px 0" @click="submitForm()" type="text">立即扣费</el-button>
             </div>
             <div v-for="(item, index) in consumeGoods" :key="index" class="text item">
               {{ "商品名称:  " + item.foodName + "     "  + "商品单价:  " + item.singlePrice + "     " + "商品数量：  " + item.number + "     " + "累加价格：  " + item.addPrice}}
@@ -76,7 +73,7 @@
 
 <script>
 import * as mqtt from "mqtt";
-import { createOrder } from '@/api/api';
+import { createOrder, getGoods } from '@/api/api';
 import headTop from '@/components/headTop'
 export default {
 
@@ -84,6 +81,7 @@ export default {
     // 初始化mqtt客户端
     console.log("消费系统开始")
     this.initMqtt();
+    this.getGoods();
   },
   data() {
     var validateId = (rule, value, callback) => {
@@ -97,9 +95,10 @@ export default {
       client: '', // 售票客户端
       status: 0, // 门票创建响应状态
       ready: 0,
-      select: '',  // 选择的商品类目
+      select: [],  // 选择的商品类目
       search_res: [], // 搜索结果
       consumeGoods: [], // 消费的食物
+      goodsData: [],  // 商品数据
       value: '',
       cardShow: false,
       price: '',
@@ -115,94 +114,6 @@ export default {
         consumeValue: 0       // 
       },
       foodType: '',
-      goods: {
-        "鸡肉火腿肠": 2,
-        "乐事薯片": 6.5,
-        "康师傅酸菜牛肉面": 5,
-        "奥利奥饼干": 3,
-        "费列罗": 3,
-        "大白兔": 0.5,
-        "冰淇淋": 2,
-        "麦丽素": 3,
-        "无花果": 1.5,
-        "卫龙辣条": 2,
-        "沙琪玛": 1,
-        "卤蛋": 1.5,
-        "泡椒鸡脚": 2.5,
-        "榴莲饼": 11,
-        "三明治面包": 3.5,
-        "香辣鱿鱼丝": 2.5,
-        "绿豆沙": 3,
-        "统一豚骨泡面": 5.5,
-        "黄桃": 10,
-      },
-      hotFood: {
-        "瘦肉鸡蛋肠粉": 5,
-        "鸡蛋炒米粉": 7,
-        "鸡蛋炒面": 7,
-        "牛腩粉": 8,
-        "云吞面": 7,
-        "鸡蛋炒饭": 7,
-        "青椒炒肉丝饭": 12,
-        "酸辣土豆丝饭": 13,
-        "梅菜扣肉饭": 15,
-        "排骨河粉": 13,
-        "猪杂汤粉": 10,
-        "湿炒牛河": 12,
-        "酸菜鱼饭": 15,
-        "咖喱鸡扒饭": 13,
-        "羊肉饺子": 18,
-        "茄子肉沫饭": 12,
-        "韭黄滑蛋饭": 11,
-        "鸡腿饭": 10,
-        "胡椒猪肚鸡饭": 13,
-        "麻辣烫": 12,
-        "酸辣鸡杂饭": 11,
-        "柳州螺狮粉": 12,
-        "烤串": 3,
-      },
-      special_service: {
-        "钓鱼虾": 50,
-        "摘水果": 50,
-        "摘野菜": 50,
-        "潜水": 40,
-        "漂流": 50,
-      },
-      drinks: {
-        "百事可乐": 7,
-        "雪碧": 3.5,
-        "脉动": 4.5,
-        "果粒橙": 8,
-        "营养快线": 4.5,
-        "茉莉花茶": 3,
-        "冰红茶": 4.5,
-        "乌龙茶": 3,
-        "椰树牌椰奶": 11.5,
-        "娃哈哈AD钙奶": 3,
-        "旺仔牛奶": 4,
-        "美年达": 3,
-        "芬达": 5,
-        "蒙牛": 3.5,
-        "农夫山泉":2.5,
-        "怡宝":2,
-        "和其正": 3,
-        "加多宝": 3,
-        "纯悦": 1.5, 
-        "雀巢咖啡":3,
-        "冰糖雪梨": 4.5,
-        "天地壹号": 18,
-        "青岛啤酒": 4.5,
-        "珠江啤酒": 4.5,
-        "维他柠檬茶": 4.5,
-        "雪花啤酒": 4.5,
-        "百威啤酒": 5,
-        "乌苏": 8,
-        "七喜": 5,
-        "银鹭花生牛奶": 3.5,
-        "二锅头": 10,
-        "珍珠奶茶": 7,
-        "杨枝甘露": 13,
-      },
       rules: {
       }
     }
@@ -226,8 +137,9 @@ export default {
       this.client.on('message', (topic, payload) => {
         switch(topic) {
           case "consume/ready": 
-            var vdata = JSON.parse(payload.toString);
-            if(vdata.state === 2) {
+            console.log(payload.toString())
+            var vdata = JSON.parse(payload.toString());
+            if(vdata.state == 2) {
               // 取出数据
               this.ruleForm.name = vdata.name;
               this.ruleForm.identity = vdata.identity;
@@ -247,8 +159,9 @@ export default {
               consume: this.consumeValue,
               goods: this.consumeGoods
             }
-            if(JSON.parse(payload.toString()).state === 1) {
+            if(JSON.parse(payload.toString()).state == 1) {
               // 添加到数据库
+              console.log(1)
               content.status = "支付成功";
               this.createOrder(content);
             }else {
@@ -268,27 +181,33 @@ export default {
       })
     },
     checkSubmit() {
-      if(! this.ready) {
-        this.$message({
-          type: 'error',
-          message: '消费设备未准备好'
-        })
-        return;
-      }
+      // if(! this.ready) {
+      //   this.$message({
+      //     type: 'error',
+      //     message: '消费设备未准备好'
+      //   })
+      //   return;
+      // }
       this.cardShow = true;
-      this.accountMoney();
     },
-    accountMoney() {
-      this.consumeGoods.forEach(item => {
-        this.consumeValue += item.addPrice
-      })
-    },
+
     submitForm() {
       this.cardShow = false;
-      // 发送游客信息给游客设备  便于后面上传
-      this.client.publish("vistor/consume_goods", JSON.stringify({amount: this.consumeValue}), function() {
-
+      var content = {
+        name: this.ruleForm.name,
+        identity: this.ruleForm.identity,
+        consume: this.consumeValue,
+        goods: this.consumeGoods
+      }
+      content.status = "支付成功";
+      this.createOrder(content);
+      // 
+      
+      this.client.publish("vistor/consume_goods", JSON.stringify({amount: String(this.consumeValue)}), function(err) {
+        console.log(err)
       })
+      this.consumeValue = 0;
+      this.consumeGoods.length = 0;
 
     },
     resetForm(formName) {
@@ -296,24 +215,25 @@ export default {
     },
 
     first_se() {
+
       this.search_res.length = 0;
-      if(this.select === '1') {
-        this.search_res = Object.keys(this.drinks)
-        this.foodType = "饮料"
-      }
-      if(this.select === '2') {
-        this.search_res = Object.keys(this.goods)
-        this.foodType = "零食"
-      }
-      if(this.select === '3') {
-        this.search_res = Object.keys(this.hotFood)
-        this.foodType = "热食"
-      }
-      if(this.select === '4') {
-        this.search_res = Object.keys(this.special_service)
-        this.foodType = "休闲服务"
-      }
+      this.select.forEach(item => {
+        this.search_res.push(item.goodsName)
+      })
     },
+
+    /*
+    [
+  { _id: 'fruit', goods: [ [Object] ] },
+  { _id: 'hotFood', goods: [ [Object], [Object] ] },
+  { _id: 'snack', goods: [ [Object], [Object], [Object] ] },
+  { _id: 'drink', goods: [ [Object] ] },
+  { _id: null, goods: [ [Object] ] },
+  { _id: 'special_service', goods: [ [Object] ] }    
+
+  goods: [ { goodsName: '百事可乐', goodsType: 'drink', price: 7 } ]
+]
+    */
     
     createOrder(order) {
       createOrder(order).then(res => {
@@ -325,29 +245,31 @@ export default {
         }else {
           this.$message({
             type: "error",
-            message: "软件扣费失败"
+            message: res.message
           })
         }
       })
     },
     // 添加购物车
     addShopCar() {
-      if(this.select === '1') {
-        this.price = this.drinks[this.value]
-      }
-      if(this.select === '2') {
-        this.price = this.goods[this.value]
-      }
-      if(this.select === '3') {
-        this.price = this.hotFood[this.value]
-      }
-      if(this.select === '4') {
-        this.price = this.special_service[this.value]
-      }
+      this.select.forEach(item => {
+        if(item.goodsName == this.value) {
+          this.price = item.price
+        }
+      })
       this.consumeGoods.push({"foodName": this.value,"foodType":  this.foodType, "singlePrice": this.price, "number": this.num, "addPrice": this.price * this.num})
+      this.consumeValue += this.price * this.num
       this.$message({
         type: "success",
         message: "添加购物车成功!"
+      })
+      this.select.length = 0
+    },
+    getGoods() {
+      getGoods().then(res => {
+        if(res.status == 1) {
+          this.goodsData = res.message
+        }
       })
     }
   }

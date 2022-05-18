@@ -571,7 +571,7 @@ export default {
         // 更改颜色
         var allmarkers = layer.getAllOverlays('marker');  // getPosition()  getIcon().image   getName()  // 获取identity
         // 通知游客  vistor/bodyTem_exception/000000001
-        this.client.publish("vistor/bodyTem_exception/" + p.clientId, JSON.stringify({message: "body temperature exception"}), function() {})
+        this.client.publish("vistor/bodyTem_exception/" + p.clientId, JSON.stringify({content: "temperature exception"}), function() {})
         for(var i = 0; i < allmarkers.length; i++) {
           if(allmarkers[i].getName() == p.identity) {
             allmarkers[i].getIcon().image = warn_icon; // 替换图标
@@ -649,7 +649,7 @@ export default {
             var danger_tip = "游客" + vistor.name + "已经进入了危险地区";
             this.say(danger_tip);
             // 3.发送给对应的游客
-            this.client.publish(topic_danger, "enter danger area", function(err) {
+            this.client.publish(topic_danger, JSON.stringify({content: "enter danger area"}), function(err) {
               console.log(err);
             })
             // 4.添加到预警数组  {time: "11:34:29", name: "黄晰维", identity: "19875915834", content: "掉水了"}
@@ -670,7 +670,7 @@ export default {
             console.log(vistor.visited_point)
             if(!vistor.visited_point.includes(scenePoint)) {
               // 第一次进入景点提醒
-              this.client.publish(topic_scene, JSON.stringify({addr: scenePoint}), function(err) {
+              this.client.publish(topic_scene, JSON.stringify({content: "enter " + scenePoint}), function(err) {
                 console.log(err);
               })
               // 记录游客去过的景点
@@ -1051,7 +1051,7 @@ export default {
     send_private_msg() {
       this.dialogVisible = false;
       // 发送私人消息
-      this.client.publish("vistor/message_private/"+ this.clientId, JSON.stringify({message: this.private_msg}), function() {
+      this.client.publish("vistor/message_private/"+ this.clientId, JSON.stringify({content: this.private_msg}), function() {
 
       })
     },

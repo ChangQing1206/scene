@@ -70,6 +70,7 @@ export default {
       // 1.连接mqtt服务器
       this.client = mqtt.connect("ws://localhost:3012");
       this.client.subscribe("deposit/ready"); // 订阅准备提醒
+      this.client.subscribe("deposit/response"); // 订阅充值响应
       this.client.on('message', (topic, payload) => {
         switch(topic) {
           case "deposit/ready":
@@ -88,19 +89,21 @@ export default {
 
             break;
           case "deposit/response":
+            // deposit/response
+            console.log(JSON.parse(payload.toString()))
             var content = {
               name: this.ruleForm.name,
               identity: this.ruleForm.identity,
               deposit: this.ruleForm.deposit
             }
-            if(JSON.parse(payload.toString().state === 1)) {
-              this.deposit_state = "充值成功";
-              content.status = this.deposit_state;
-              increaseDeposit(content);
+            if(JSON.parse(payload.toString()).state == 1) {
+              this.ruleForm.deposit_state = "充值成功";
+              content.status = this.ruleForm.deposit_state;
+              this.increaseDeposit(content);
             }else {
-              this.deposit_state = "充值失败"
-              content.status = this.deposit_state;
-              increaseDeposit(content);
+              this.ruleForm.deposit_state = "充值失败"
+              content.status = this.ruleForm.deposit_state;
+              this.increaseDeposit(content);
               this.$message({
                 type: 'error',
                 message: "硬件充值失败"

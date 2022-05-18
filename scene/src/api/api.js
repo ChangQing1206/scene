@@ -138,3 +138,32 @@ export const checkTicket = data => request('post', '/api/ticket/checkTicket', da
 
 export const createOrder = data => request('post', '/api/consume/createOrder', data)
 
+/**
+ * 添加商品
+ */
+
+export const addGoods = data => request('post', '/api/goods/addGoods', data)
+
+/**
+ * 获取商品
+ */
+
+export const getGoods = () => request('get', '/api/goods/getGoods')
+
+/**
+ * 编辑商品
+ */
+
+export const editGoods = data => request('get', '/api/goods/editGoods', data)
+
+/**
+ * 删除商品
+ */
+
+export const delGoods = data => request('post', '/api/goods/delGoods', data)
+
+/**
+ * 更新商品
+ */
+
+export const updateGoods = data => request('post', '/api/goods/updateGoods', data)

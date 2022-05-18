@@ -57,11 +57,13 @@ export default {
       tableData: [],
       limit: 20,
       offset: 0,
-      count: 0
+      count: 0,
+      currentPage: 1,
+      mode: 'normal'
     }
   },
-  create() {
-    this.getOrdersCount();
+  created() {
+    // this.getOrdersCount();
     this.getOrders(); 
   },
   components: {
@@ -72,11 +74,9 @@ export default {
     getOrders() {
       getOrders({offset: this.offset, limit: this.limit}).then(res => {
         if(res.status == 1) {
-          const data = res.data; // 是一个数组对象
           this.tableData.length = 0; 
-          data.forEach((item, index) => {
-            this.tableData.push(item);
-          })
+          this.tableData = res.message;
+          this.count = this.tableData.length;
         }
         else {
           this.$message({
@@ -90,11 +90,8 @@ export default {
     getClientOrders() {
       getClientOrders({offset: this.offset, limit: this.limit}).then(res => {
         if(res.status == 1) {
-          const data = res.data;
           this.tableData.length = 0;
-          data.forEach((item, index) => {
-            this.tableData.push(item);
-          })
+          this.tableData = res.message;
         }
         else {
           this.$message({
@@ -104,28 +101,7 @@ export default {
         }
       }).catch(err => err)
     },
-  // 3.获取顺序显示时的消费数量
-    getOrdersCount() {
-      getOrdersCount().then(res => {
-        if(res.status == 1) {
-          this.count = res.count;
-        }
-      }).catch(err => err)
-    },
-    // 4.获取游客数量
-    getVistorsCount() {
-      getVistorsCount().then(res => {
-        if(res.status == 1){
-          this.count = res.count;
-        }
-        else {
-          this.$message({
-            type: 'error',
-            message: '获取数据失败'
-          })
-        }
-      }).catch(err => err)
-    },
+
     // 5.标签事件处理
     normalShow() {
       this.getOrdersCount();
@@ -139,7 +115,10 @@ export default {
     // 7.分页处理
     handleCurrentChange(val) {
       this.offset = (val - 1) * this.limit;
-    }
+    },
+        handleSizeChange() {
+
+    },
   }
 }
 </script>

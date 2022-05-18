@@ -12,7 +12,7 @@
           <el-input v-model="ruleForm.identity"></el-input>
         </el-form-item>
         <el-form-item label="充值金额" prop="amount">
-          <el-input v-model="ruleForm.bodyTem"></el-input>
+          <el-input v-model="ruleForm.amount"></el-input>
         </el-form-item>
         <el-form-item label="门票状态" prop="status">
           <el-select v-model="ruleForm.status" placeholder="选择门票状态">
@@ -54,6 +54,7 @@ export default {
       client: '', // 售票客户端
       vistorId: '',
       ready: 0,
+      ready1: 0,
       ruleForm: {
         name: '',
         identity: '',
@@ -87,18 +88,27 @@ export default {
       this.client.subscribe("ticket/check");         // 用于门票验证  上传至服务器
       this.client.subscribe("ticket/response");      // 出票成功响应
       this.client.on('message', (topic, payload) => {
-        console.log(topic)
         switch(topic) {
           case "ticket/ready": 
             if(JSON.parse(payload.toString()).state == 2)
+            {
               this.ready = 1;   // 已准备
+              this.$message({
+                type: "success",
+                message: "出票终端已启动"
+              })
+            }
             break;
           case "ticket/get_clientId":
             this.vistorId = payload.toString();  // 取到游客设备id
-            alert("设备" + this.vistorId + "启动")
+            this.ready1 = 1;
+            this.$message({
+              type: "success",
+              message: "游客终端" + this.vistorId + "已启动"
+            })
             break;
           case "ticket/response":
-            if(JSON.parse(payload.toString()).state === 1)
+            if(JSON.parse(payload.toString()).state == 1)
             {
               var content = {
                 client_id: this.vistorId, 
@@ -120,6 +130,10 @@ export default {
           case "ticket/check":
             var check = JSON.parse(payload.toString())
             if(check.state == 1) {
+              this.$message({
+                type: "success",
+                message: "验票终端已启动"
+              })
               this.checkTicket({name: check.name, identity: check.identity, status: check.status});
             }else {
               this.$message({
@@ -129,42 +143,36 @@ export default {
             }
             break;
           default:
-            console.log("topic错误");
+            this.$message({
+              type: "error",
+              message: "topic错误"
+            })
             break;
         }
       })
     },
-    submitForm(formName) {
-      this.$refs[formName].validate((valid) => {
-        if (valid) {
-          if(! this.ready) {
+    submitForm() {
+          // if(!this.ready && !this.ready1) {
+          if(!this.ready) {
             this.$message({
               type: 'error',
-              message: '出票设备未准备好'
+              message: '出票终端或者游客终端未准备好'
             })
             return;
           }
           // 发送游客信息给游客设备  便于后面上传
-          this.client.publish("vistor/get_Message/" + this.vistorId, JSON.stringify({name: this.ruleForm.name, identity: this.ruleForm.identity}), function() {
-
-          })
+          // this.client.publish("vistor/get_Message/" + this.vistorId, JSON.stringify({name: this.ruleForm.name, identity: this.ruleForm.identity}), function() {})
           // 出票信息下发
           var content = {
             name: this.ruleForm.name, 
             identity: this.ruleForm.identity, 
             status: this.ruleForm.status,
-            deposit: this.ruleForm.amount
+            amount: this.ruleForm.amount
           }
           this.client.publish("vistor/create_ticket", JSON.stringify(content), function(err) {console.log(err)})
-        } else {
-          this.$message({
-            type: 'error',
-            message: '输入错误'
-          })
-          return false;
-        }
-      });
-    },
+        },
+  
+  
     resetForm(formName) {
       this.$refs[formName].resetFields();
     },
