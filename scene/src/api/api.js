@@ -139,6 +139,12 @@ export const checkTicket = data => request('post', '/api/ticket/checkTicket', da
 export const createOrder = data => request('post', '/api/consume/createOrder', data)
 
 /**
+ * 删除消费记录
+ */
+
+export const delConsume = data => request('post', '/api/consume/delConsume', data)
+
+/**
  * 添加商品
  */
 

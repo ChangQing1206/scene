@@ -103,6 +103,7 @@ export default {
       cardShow: false,
       price: '',
       num: 0,
+      goodsType: '',
       consumeValue: 0,
       ruleForm: {
         name: '',
@@ -181,26 +182,26 @@ export default {
       })
     },
     checkSubmit() {
-      // if(! this.ready) {
-      //   this.$message({
-      //     type: 'error',
-      //     message: '消费设备未准备好'
-      //   })
-      //   return;
-      // }
+      if(! this.ready) {
+        this.$message({
+          type: 'error',
+          message: '消费设备未准备好'
+        })
+        return;
+      }
       this.cardShow = true;
     },
 
     submitForm() {
       this.cardShow = false;
-      var content = {
-        name: this.ruleForm.name,
-        identity: this.ruleForm.identity,
-        consume: this.consumeValue,
-        goods: this.consumeGoods
-      }
-      content.status = "支付成功";
-      this.createOrder(content);
+      // var content = {
+      //   name: this.ruleForm.name,
+      //   identity: this.ruleForm.identity,
+      //   consume: this.consumeValue,
+      //   goods: this.consumeGoods
+      // }
+      // content.status = "支付成功";
+      // this.createOrder(content);
       // 
       
       this.client.publish("vistor/consume_goods", JSON.stringify({amount: String(this.consumeValue)}), function(err) {
@@ -217,6 +218,7 @@ export default {
     first_se() {
 
       this.search_res.length = 0;
+      console.log(this.select)
       this.select.forEach(item => {
         this.search_res.push(item.goodsName)
       })
@@ -255,9 +257,12 @@ export default {
       this.select.forEach(item => {
         if(item.goodsName == this.value) {
           this.price = item.price
+          this.goodsType = item.goodsType
         }
       })
-      this.consumeGoods.push({"foodName": this.value,"foodType":  this.foodType, "singlePrice": this.price, "number": this.num, "addPrice": this.price * this.num})
+      
+      this.consumeGoods.push({"foodName": this.value,"foodType":  this.goodsType, "singlePrice": this.price, "number": this.num, "addPrice": this.price * this.num})
+      console.log(this.consumeGoods)
       this.consumeValue += this.price * this.num
       this.$message({
         type: "success",

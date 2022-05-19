@@ -78,7 +78,7 @@
               @click="delGoods(scope.$index, scope.row)">
               删除
             </el-button>
-            <el-button type="primary" size="small">编辑</el-button>
+            <el-button type="primary"  @click="edit(scope.$index, scope.row)" size="small">编辑</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -94,6 +94,49 @@
           :total="count">
         </el-pagination>
       </div>
+
+      <el-dialog title="收货地址" :visible.sync="dialogFormVisible">
+        <el-form ref="form" :model="editContent" label-width="80px">
+          <el-form-item label="注册码">
+            <el-tooltip  class="item" effect="dark" content="商家注册码必须填写无误，否则添加商品将会失败" placement="top">
+              <el-input v-model="editContent.regCode"></el-input>
+            </el-tooltip>
+          </el-form-item>
+          <el-form-item label="商品名称">
+            <el-input v-model="editContent.goodsName"></el-input>
+          </el-form-item>
+          <el-form-item label="商品类别">
+            <el-select v-model="editContent.goodsType" placeholder="请选择商品类别">
+              <el-option label="饮料" value="drink"></el-option>
+              <el-option label="零食" value="snack"></el-option>
+              <el-option label="纪念品" value="memory"></el-option>
+              <el-option label="热食" value="hotFood"></el-option>
+              <el-option label="水果" value="fruit"></el-option>
+              <el-option label="住宿" value="home"></el-option>
+              <el-option label="特别服务" value="special_service"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="出售状态">
+            <el-switch v-model="editContent.sellState"></el-switch>
+          </el-form-item>
+          <el-form-item label="商品单价">
+            <el-input v-model="editContent.price"></el-input>
+          </el-form-item>
+          <el-form-item label="商品库存">
+            <el-input v-model="editContent.number"></el-input>
+          </el-form-item>
+          <el-form-item label="商品描述">
+            <el-input type="textarea" v-model="editContent.desc"></el-input>
+          </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="dialogFormVisible = false">取 消</el-button>
+          <el-button type="primary" @click="confirm">确 定</el-button>
+        </div>
+      </el-dialog>
+        
+        
+      
     </div>
 
   </div>
@@ -121,13 +164,28 @@
         offset: 0,
         count: 0,
         currentPage: 1,
-        mode: 'normal'
+        mode: 'normal',
+        dialogFormVisible: false,
+        editContent: {}
       }
     },
     mounted() {
       
     },
     methods: {
+      confirm() {
+        this.dialogFormVisible = false;
+        this.updateGoods();
+      },
+      edit(index, row) {
+        this.dialogFormVisible = true;
+        this.editContent = row;
+        if(row.isSell == "出售中") {
+          this.editContent.sellState = true
+        }else {
+          this.editContent.sellState = false
+        }
+      },
       switchEvent() {
         if(this.radio == 2) {
           this.editGoods();
@@ -155,7 +213,7 @@
         editGoods({offset: this.offset, limit: this.limit}).then(res => {
           if(res.status == 1) {
             this.tableData = res.message
-            this.count = this.tableData.length
+            this.count = res.count
           }
         })
       },
@@ -195,9 +253,9 @@
       handleCurrentChange(val) {
         this.currentPage = val;
         this.offset = (val - 1) * this.limit;
-        if(this.mode == 'normal') this.getDeposits();
-        else if(this.mode == 'client') this.getClientDeposits();
-
+        // if(this.mode == 'normal') this.getDeposits();
+        // else if(this.mode == 'client') this.getClientDeposits();
+        this.editGoods();
 
         // bug: 分页 count skip limit
 
